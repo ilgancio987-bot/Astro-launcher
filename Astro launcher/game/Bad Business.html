@@ -1,0 +1,1409 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bad Business</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;700&family=Rubik:wght@400;500;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* San Ardente di notte: cielo al tramonto in canvas, pannelli HUD scuri e traslucidi, accento rosa-arancio, verde per i soldi. Tema unico notturno, scelto di proposito. */
+:root{
+  --night:#0b0913; --panel:rgba(16,13,28,.84); --panel2:rgba(30,25,48,.9); --line:rgba(255,255,255,.1);
+  --fg:#f5f0ea; --muted:#a59fb8; --pink:#ff3d7f; --orange:#ff9a3c; --gold:#ffd04a; --cash:#7be07b; --red:#ff4a4a; --blue:#4ab3ff;
+  --display:"Oswald","Arial Narrow","Impact",sans-serif;
+  --body:"Rubik","Segoe UI",Arial,sans-serif;
+  --mono:"JetBrains Mono",Consolas,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{min-height:100%}
+body{background:var(--night);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.45;overflow-x:hidden}
+canvas#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block}
+canvas#fx{position:fixed;inset:0;width:100%;height:100%;z-index:40;pointer-events:none;display:block}
+#fps{position:fixed;left:8px;top:calc(8px + env(safe-area-inset-top,0px));z-index:60;font-family:var(--mono);font-size:12px;color:var(--cash);background:rgba(0,0,0,.6);padding:2px 6px;border-radius:3px}
+.screen{position:relative;z-index:10}
+button{font-family:inherit}
+.btn{font-family:var(--display);font-weight:500;letter-spacing:.04em;text-transform:uppercase;font-size:14px;border:1px solid rgba(255,255,255,.18);
+  background:var(--panel2);color:var(--fg);border-radius:3px;padding:9px 14px;cursor:pointer;transition:background .12s,border-color .12s,transform .08s}
+.btn:hover:not(:disabled){border-color:var(--orange);background:rgba(255,154,60,.14)}
+.btn:active:not(:disabled){transform:scale(.97)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn:focus-visible,.tab:focus-visible,.seg button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.btn.hot{background:linear-gradient(90deg,var(--pink),var(--orange));border-color:transparent;color:#1a0a10;font-weight:700}
+.btn.wide{width:100%}
+.label{font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 10px}
+
+/* ---------- MENU ---------- */
+#menu{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding-inline:16px;padding-block:40px}
+.menu-inner{max-width:520px;width:100%;margin:0 auto 0 8vw}
+@media (max-width:700px){.menu-inner{margin:0 auto}}
+.logo{font-family:var(--display);font-weight:700;font-size:clamp(56px,13vw,120px);line-height:.88;margin:0;text-transform:uppercase;
+  background:linear-gradient(180deg,#fff 0%,#ffd7b0 45%,var(--orange) 70%,var(--pink) 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  filter:drop-shadow(0 4px 0 rgba(0,0,0,.7)) drop-shadow(0 10px 30px rgba(255,61,127,.35));transform:skewX(-6deg)}
+.tagline{font-family:var(--display);letter-spacing:.3em;text-transform:uppercase;color:var(--fg);margin:10px 0 34px;font-size:14px;opacity:.85}
+.menu-list{display:flex;flex-direction:column;gap:6px}
+.mbtn{all:unset;cursor:pointer;font-family:var(--display);font-weight:700;font-size:clamp(22px,4vw,30px);text-transform:uppercase;letter-spacing:.03em;
+  padding:6px 14px;border-left:4px solid transparent;color:rgba(245,240,234,.82);transition:all .15s}
+.mbtn:hover,.mbtn:focus-visible{color:#fff;border-left-color:var(--pink);background:linear-gradient(90deg,rgba(255,61,127,.28),transparent);padding-left:22px}
+.mbtn[hidden]{display:none}
+.langs{display:flex;gap:6px;margin-top:30px;flex-wrap:wrap}
+.langs button{all:unset;cursor:pointer;font-family:var(--mono);font-size:13px;padding:5px 10px;border:1px solid var(--line);border-radius:3px;color:var(--muted);background:rgba(0,0,0,.4)}
+.langs button.on{color:#1a0a10;background:var(--gold);border-color:var(--gold)}
+.ver{position:fixed;right:16px;bottom:calc(12px + env(safe-area-inset-bottom,0px));font-family:var(--mono);font-size:11px;color:rgba(255,255,255,.4);z-index:11}
+
+/* ---------- MODALE ---------- */
+.overlay{position:fixed;inset:0;z-index:70;background:rgba(5,4,10,.72);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{background:rgba(18,15,30,.97);border:1px solid var(--line);border-top:3px solid var(--pink);border-radius:4px;width:100%;max-width:520px;max-height:88vh;overflow:auto;padding:22px}
+.modal h2{font-family:var(--display);font-size:30px;text-transform:uppercase;margin:0 0 16px;letter-spacing:.02em}
+.setrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.setrow label{font-weight:500}
+.seg{display:flex;border:1px solid var(--line);border-radius:3px;overflow:hidden;flex-wrap:wrap}
+.seg button{background:transparent;color:var(--muted);border:none;padding:6px 11px;font-family:var(--mono);font-size:12.5px;cursor:pointer}
+.seg button.on{background:var(--gold);color:#1a0a10;font-weight:700}
+input[type=range]{accent-color:var(--pink);width:150px}
+.modal .actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:18px}
+.howto p{margin:0 0 10px;color:#ddd6e8}
+.howto b{color:var(--gold)}
+
+/* ---------- GIOCO ---------- */
+#game{padding-inline:16px;padding-block:0 40px}
+.hud{position:sticky;top:env(safe-area-inset-top,0px);z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding-block:10px;margin-inline:-16px;padding-inline:16px;background:linear-gradient(180deg,rgba(8,6,14,.95),rgba(8,6,14,.7));border-bottom:1px solid var(--line);backdrop-filter:blur(4px)}
+.hud-left{display:flex;align-items:center;gap:14px}
+.hud .mini{font-family:var(--display);font-weight:700;font-size:24px;text-transform:uppercase;color:var(--orange);transform:skewX(-6deg);line-height:1}
+.stars{display:flex;gap:2px}
+.stars svg{width:20px;height:20px}
+.stars svg path{fill:rgba(255,255,255,.14);stroke:rgba(0,0,0,.6);stroke-width:1}
+.stars svg.on path{fill:#fff}
+.stars.flash svg.on path{animation:sf .4s infinite alternate}
+@keyframes sf{to{fill:var(--blue)}}
+.hud-right{display:flex;align-items:center;gap:14px;margin-left:auto}
+.money{text-align:right}
+.money .cash{font-family:var(--display);font-weight:700;font-size:clamp(26px,5vw,38px);line-height:1;color:var(--cash);text-shadow:0 2px 0 #0a2a0a,0 0 18px rgba(123,224,123,.25);font-variant-numeric:tabular-nums}
+.money .ips{font-family:var(--mono);font-size:12.5px;color:#cfe9cf}
+.icobtn{width:42px;height:42px;display:grid;place-items:center;padding:0}
+.gearbtn{height:42px;display:flex;align-items:center;gap:8px}
+@media (max-width:600px){.gearbtn span{display:none}.gearbtn{width:42px;justify-content:center;padding:0}}
+.wrap{max-width:1240px;margin:0 auto}
+.grid{display:grid;grid-template-columns:minmax(270px,340px) minmax(0,1fr);gap:16px;margin-top:16px}
+@media (max-width:860px){.grid{grid-template-columns:minmax(0,1fr)}}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:4px;padding:14px;backdrop-filter:blur(3px);min-width:0}
+
+/* Pulsante incasso */
+.collect{position:relative;width:100%;aspect-ratio:5/4;border:none;background:none;cursor:pointer;padding:0;display:grid;place-items:center;-webkit-tap-highlight-color:transparent}
+.bag{width:74%;aspect-ratio:4/3;position:relative;transition:transform .07s}
+.bag .body{position:absolute;inset:18% 0 0 0;border-radius:10px;background:linear-gradient(160deg,#3a2a1c,#1d140c);border:2px solid #5b4128;box-shadow:0 14px 40px rgba(0,0,0,.6),inset 0 2px 0 rgba(255,255,255,.08)}
+.bag .handle{position:absolute;left:35%;right:35%;top:2%;height:22%;border:6px solid #5b4128;border-bottom:none;border-radius:12px 12px 0 0}
+.bag .stack{position:absolute;left:12%;right:12%;top:30%;bottom:16%;border-radius:4px;
+  background:repeating-linear-gradient(180deg,#5fbf5f 0 7px,#3e8e3e 7px 9px);box-shadow:inset 0 0 0 2px rgba(0,0,0,.25)}
+.bag .band{position:absolute;left:44%;width:12%;top:30%;bottom:16%;background:var(--gold);opacity:.9}
+.bag .lock{position:absolute;left:44%;width:12%;top:14%;height:10%;background:var(--gold);border-radius:2px}
+.collect:hover .bag{transform:scale(1.03) rotate(-1deg)}
+.collect:active .bag{transform:scale(.93)}
+.collect:focus-visible{outline:2px solid var(--gold);outline-offset:4px;border-radius:8px}
+.clickinfo{text-align:center;font-family:var(--mono);color:var(--muted);margin-top:4px}
+.floater{position:absolute;pointer-events:none;font-family:var(--display);font-weight:700;color:var(--cash);font-size:22px;animation:fl .9s ease-out forwards;text-shadow:0 2px 0 #000;z-index:2}
+@keyframes fl{to{transform:translateY(-80px);opacity:0}}
+
+.bar{height:10px;background:rgba(255,255,255,.07);border-radius:2px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;transition:width .2s}
+.bar.heat i{background:linear-gradient(90deg,var(--blue),var(--red))}
+.bar.eff i{background:var(--cash)}
+.bar.mis i{background:linear-gradient(90deg,var(--pink),var(--orange))}
+.row{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:12.5px;color:var(--muted);margin-top:6px;flex-wrap:wrap}
+.row b{color:var(--fg);font-weight:500}
+.stack-gap{display:flex;flex-direction:column;gap:10px}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap}
+.btnrow .btn{flex:1 1 auto}
+.warn{color:var(--orange);font-size:12.5px;margin-top:6px}
+.dl{display:grid;grid-template-columns:1fr auto;gap:5px 12px;font-family:var(--mono);font-size:12.5px;margin:0}
+.dl dt{color:var(--muted)} .dl dd{margin:0;text-align:right;font-variant-numeric:tabular-nums}
+
+/* Missione corrente (pannello) */
+.mission{border-left:3px solid var(--pink)}
+.mission h3{font-family:var(--display);font-size:20px;text-transform:uppercase;margin:0 0 2px;letter-spacing:.02em}
+.mission .obj{color:#ddd6e8;margin-bottom:8px}
+
+/* Tabs */
+.tabs{scroll-margin-top:90px;display:flex;gap:2px;overflow-x:auto;border-bottom:1px solid var(--line);margin-bottom:14px}
+.tab{background:none;border:none;color:var(--muted);font-family:var(--display);font-weight:500;font-size:15px;text-transform:uppercase;letter-spacing:.06em;padding:10px 14px;cursor:pointer;border-bottom:3px solid transparent;white-space:nowrap}
+.tab.on{color:var(--fg);border-bottom-color:var(--pink)}
+.tab .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--gold);margin-left:6px;vertical-align:middle}
+.panehead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+
+.racket{display:grid;grid-template-columns:46px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.racket:first-child{border-top:none}
+.racket.locked{opacity:.3}
+.racket .n{font-family:var(--display);font-weight:700;font-size:24px;text-align:center;color:var(--orange);font-variant-numeric:tabular-nums}
+.racket .name{font-weight:500}
+.racket .meta{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.racket .btn{min-width:124px;font-family:var(--mono);text-transform:none;letter-spacing:0}
+.racket .pb{height:3px;background:rgba(255,255,255,.07);margin-top:5px;border-radius:2px;overflow:hidden}
+.racket .pb i{display:block;height:100%;background:var(--orange)}
+@media (max-width:440px){.racket{grid-template-columns:36px minmax(0,1fr)}.racket .btn{grid-column:1/-1;width:100%}}
+.ups{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:8px}
+.up{text-align:left;text-transform:none;letter-spacing:0;display:flex;flex-direction:column;gap:2px;font-family:var(--body)}
+.up b{font-size:13px;font-weight:500}
+.up span{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.up em{font-style:normal;font-family:var(--mono);color:var(--cash);font-size:12.5px}
+.empty{color:var(--muted);font-style:italic;margin:0}
+
+/* Mappa */
+.mapwrap{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(220px,1fr);gap:14px}
+@media (max-width:640px){.mapwrap{grid-template-columns:minmax(0,1fr)}}
+.map{width:100%;height:auto;display:block;background:#0a1626;border-radius:4px;border:1px solid var(--line)}
+.map .d{cursor:pointer;stroke:#0a1626;stroke-width:3;transition:fill .2s}
+.map .d.free{fill:#2a2540}
+.map .d.free:hover{fill:#3a3358}
+.map .d.mine{fill:url(#mine)}
+.map .d.sel{stroke:var(--gold);stroke-width:3}
+.map .d.attacked{animation:att .5s infinite alternate}
+@keyframes att{to{fill:var(--red)}}
+.map text{font-family:var(--display);font-size:11px;fill:#fff;text-transform:uppercase;pointer-events:none;paint-order:stroke;stroke:#000;stroke-width:3px;letter-spacing:.05em}
+.dinfo h3{font-family:var(--display);font-size:22px;text-transform:uppercase;margin:0 0 8px}
+.alert{border:1px solid var(--red);background:rgba(255,74,74,.12);padding:10px;border-radius:3px;margin-bottom:12px;font-weight:500}
+.alert[hidden]{display:none}
+
+/* Missioni / traguardi liste */
+.mlist,.alist{display:flex;flex-direction:column;gap:6px}
+.mi{display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:10px;align-items:center;padding:8px 10px;border-radius:3px;background:rgba(255,255,255,.03)}
+.mi.done{opacity:.55}
+.mi.cur{background:rgba(255,61,127,.12);outline:1px solid rgba(255,61,127,.4)}
+.mi .ix{font-family:var(--display);font-size:18px;color:var(--orange);text-align:center}
+.mi .t{font-weight:500}
+.mi .s{font-size:12.5px;color:var(--muted)}
+.mi .r{font-family:var(--mono);font-size:12px;color:var(--cash);text-align:right}
+.alist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px}
+.ach{display:flex;gap:10px;align-items:center;padding:10px;border-radius:3px;background:rgba(255,255,255,.03);border:1px solid var(--line)}
+.ach .ic{width:34px;height:34px;flex:none;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.06);font-family:var(--display);color:var(--muted)}
+.ach.got{border-color:rgba(255,208,74,.5)}
+.ach.got .ic{background:var(--gold);color:#1a0a10}
+.ach .t{font-weight:500;font-size:13px}
+.ach .s{font-size:11.5px;color:var(--muted)}
+.news{font-family:var(--mono);font-size:12.5px;display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+.news div{border-left:2px solid var(--line);padding-left:8px;color:var(--muted)}
+.news div.hot{border-color:var(--red);color:var(--fg)}
+.news div.good{border-color:var(--cash);color:var(--fg)}
+
+/* Banner missione / toast / soffiata */
+#banner{position:fixed;left:0;right:0;top:32%;z-index:65;text-align:center;pointer-events:none;padding-block:18px;
+  background:linear-gradient(90deg,transparent,rgba(0,0,0,.8) 20%,rgba(0,0,0,.8) 80%,transparent);animation:bn 3s ease forwards}
+#banner .big{font-family:var(--display);font-weight:700;font-size:clamp(34px,7vw,64px);text-transform:uppercase;color:var(--gold);transform:skewX(-6deg);
+  text-shadow:0 3px 0 #000,0 0 20px rgba(255,208,74,.4);line-height:1}
+#banner .small{font-family:var(--display);font-size:18px;letter-spacing:.12em;text-transform:uppercase;margin-top:6px;color:#fff}
+#banner.bad .big{color:var(--red)}
+@keyframes bn{0%{opacity:0;transform:scaleY(.2)}10%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+.toasts{position:fixed;right:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:66;display:flex;flex-direction:column;gap:8px;align-items:flex-end;max-width:calc(100% - 32px)}
+.toast{background:rgba(14,12,24,.95);border:1px solid var(--line);border-left:3px solid var(--gold);padding:10px 14px;border-radius:3px;font-size:13px;animation:ti .25s ease}
+.toast.bad{border-left-color:var(--red)} .toast.good{border-left-color:var(--cash)}
+.toast b{display:block;font-family:var(--display);text-transform:uppercase;letter-spacing:.05em}
+@keyframes ti{from{transform:translateX(30px);opacity:0}}
+#tip{position:fixed;z-index:55;border:none;cursor:pointer;background:var(--gold);color:#1a0a10;font-family:var(--display);font-weight:700;text-transform:uppercase;font-size:16px;
+  padding:10px 14px;border-radius:3px;box-shadow:0 6px 24px rgba(0,0,0,.6),0 0 0 3px rgba(255,208,74,.3);animation:pulse .7s infinite alternate}
+@keyframes pulse{to{transform:scale(1.08)}}
+.shake{animation:shake .45s}
+@keyframes shake{20%{transform:translateX(-7px)}60%{transform:translateX(7px)}}
+/* Tutorial */
+#tutSpot{position:fixed;z-index:80;pointer-events:none;border-radius:6px;box-shadow:0 0 0 9999px rgba(5,4,10,.7),0 0 0 3px var(--gold);transition:left .2s,top .2s,width .2s,height .2s}
+#tutCard{position:fixed;z-index:81;width:min(340px,calc(100% - 32px));background:rgba(18,15,30,.98);border:1px solid var(--line);border-top:3px solid var(--gold);border-radius:4px;padding:16px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
+#tutCard h4{font-family:var(--display);text-transform:uppercase;font-size:21px;margin:0 0 6px;letter-spacing:.02em}
+#tutCard p{margin:0 0 12px;color:#ddd6e8}
+#tutCard .tstep{font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:4px;text-transform:uppercase;letter-spacing:.1em}
+#tutCard .hint{font-family:var(--mono);font-size:12.5px;color:var(--gold);margin:-4px 0 12px}
+#tutCard .btnrow .btn{flex:0 1 auto}
+/* Eventi a scelta */
+#evcard{position:fixed;left:16px;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:67;width:min(370px,calc(100% - 32px));background:rgba(18,15,30,.97);border:1px solid var(--line);border-top:3px solid var(--orange);border-radius:4px;padding:14px;box-shadow:0 12px 40px rgba(0,0,0,.6);animation:ti .3s ease}
+#evcard h4{font-family:var(--display);text-transform:uppercase;font-size:19px;margin:0 0 4px}
+#evcard p{margin:0 0 10px;color:#ddd6e8;font-size:13px}
+#evcard .btn{text-transform:none;letter-spacing:0;font-family:var(--body);font-size:13px;text-align:left}
+#evcard .timer{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:8px}
+/* Combo */
+.combo{position:absolute;right:14px;top:10px;font-family:var(--display);font-weight:700;color:var(--gold);font-size:22px;transform:skewX(-6deg);text-shadow:0 2px 0 #000;pointer-events:none}
+/* Liste: colpi, mercato, luogotenenti */
+.list{display:flex;flex-direction:column;gap:8px}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:center;padding:12px;border:1px solid var(--line);border-radius:3px;background:rgba(255,255,255,.025)}
+.item.locked{opacity:.38}
+.item .t{font-weight:500;font-size:15px}
+.item .meta{font-family:var(--mono);font-size:12px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:3px}
+.item .meta b{color:var(--fg);font-weight:500}
+.item .btns{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.item .btn{font-family:var(--mono);text-transform:none;letter-spacing:0;font-size:12.5px}
+.active-heist{border-color:var(--orange);background:rgba(255,154,60,.08);grid-template-columns:minmax(0,1fr)}
+.mkt{grid-template-columns:minmax(0,1fr) 110px auto}
+.spark{width:110px;height:32px;display:block}
+@media (max-width:620px){.mkt{grid-template-columns:minmax(0,1fr) 90px}.mkt .btns{grid-column:1/-1}.spark{width:90px}}
+@media (max-width:520px){.item:not(.mkt){grid-template-columns:minmax(0,1fr)}.item .btns{justify-content:stretch}.item .btns .btn{flex:1}}
+.up-c{color:var(--cash)!important}.dn-c{color:var(--red)!important}
+.lv{display:flex;gap:3px;margin-top:7px}.lv i{width:14px;height:5px;background:rgba(255,255,255,.1);border-radius:1px}.lv i.on{background:var(--gold)}
+.note{color:var(--muted);font-size:13px;margin:0 0 12px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+
+<canvas id="bg"></canvas>
+<canvas id="fx"></canvas>
+<div id="fps" hidden>0 FPS</div>
+
+<!-- MENU PRINCIPALE -->
+<section id="menu" class="screen">
+  <div class="menu-inner">
+    <h1 class="logo">Bad<br>Business</h1>
+    <p class="tagline" data-t="tagline"></p>
+    <nav class="menu-list">
+      <button class="mbtn" id="mContinue" data-t="continue"></button>
+      <button class="mbtn" id="mNew" data-t="newGame"></button>
+      <button class="mbtn" id="mSettings" data-t="settings"></button>
+      <button class="mbtn" id="mHow" data-t="howTo"></button>
+    </nav>
+    <div class="langs" id="menuLangs"></div>
+  </div>
+  <div class="ver">v2.0 · San Ardente</div>
+</section>
+
+<!-- GIOCO -->
+<section id="game" class="screen" hidden>
+  <div class="hud">
+    <div class="hud-left">
+      <div class="mini">Bad Business</div>
+      <div class="stars" id="stars" aria-label="wanted"></div>
+    </div>
+    <div class="hud-right">
+      <div class="money"><div class="cash" id="cash">$0</div><div class="ips" id="ips">+$0/s</div></div>
+      <button class="btn gearbtn" id="gearBtn" aria-label="Impostazioni"><svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.7 7.7 0 0 0-1.7-1L15 3h-4l-.3 2.9a7.7 7.7 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.7 7.7 0 0 0 1.7 1L11 21h4l.3-2.9a7.7 7.7 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg><span data-t="settings"></span></button>
+      <button class="btn icobtn" id="pauseBtn" aria-label="Pausa"><svg width="18" height="18" viewBox="0 0 18 18"><rect x="3" y="2" width="4" height="14" fill="currentColor"/><rect x="11" y="2" width="4" height="14" fill="currentColor"/></svg></button>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="grid">
+      <div class="col">
+        <div class="card mission" id="curMission"></div>
+
+        <div class="card" style="position:relative">
+          <p class="label" data-t="collect"></p>
+          <div class="combo" id="combo" hidden></div>
+          <button class="collect" id="collect" aria-label="collect">
+            <div class="bag"><div class="handle"></div><div class="body"></div><div class="stack"></div><div class="band"></div><div class="lock"></div></div>
+          </button>
+          <div class="clickinfo" id="clickinfo"></div>
+        </div>
+
+        <div class="card" id="heatcard">
+          <p class="label" data-t="wanted"></p>
+          <div class="bar heat"><i id="heatfill"></i></div>
+          <div class="row"><span id="heatpct"></span><span id="heatrate"></span></div>
+          <button class="btn wide" id="lawyer" style="margin-top:10px"></button>
+        </div>
+
+        <div class="card" id="crewcard">
+          <p class="label" data-t="crew"></p>
+          <dl class="dl">
+            <dt data-t="soldiers"></dt><dd id="sold">0</dd>
+            <dt data-t="capacity"></dt><dd id="cap">0</dd>
+            <dt data-t="defense"></dt><dd id="def">0</dd>
+            <dt data-t="efficiency"></dt><dd id="effpct">100%</dd>
+          </dl>
+          <div class="bar eff" style="margin-top:8px"><i id="efffill"></i></div>
+          <div class="warn" id="effwarn" hidden></div>
+          <div class="btnrow" style="margin-top:10px">
+            <button class="btn" id="hire1"></button>
+            <button class="btn" id="hire10"></button>
+          </div>
+        </div>
+
+        <div class="card">
+          <p class="label" data-t="respect"></p>
+          <dl class="dl">
+            <dt data-t="respect"></dt><dd id="resp">0</dd>
+            <dt data-t="respectBonus"></dt><dd id="respbonus">+0%</dd>
+            <dt data-t="respectOnRetire"></dt><dd id="respnext">0</dd>
+          </dl>
+          <button class="btn wide" id="retire" style="margin-top:10px" data-t="retire"></button>
+          <div id="retireConfirm" hidden>
+            <p class="warn" data-t="retireInfo"></p>
+            <div class="btnrow"><button class="btn hot" id="retireYes" data-t="confirm"></button><button class="btn" id="retireNo" data-t="cancel"></button></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col">
+        <div class="card">
+          <div class="tabs" role="tablist" id="tabs">
+            <button class="tab on" data-tab="biz" data-t="tabBusiness"></button>
+            <button class="tab" data-tab="heist" data-t="tabHeist"></button>
+            <button class="tab" data-tab="market" data-t="tabMarket"></button>
+            <button class="tab" data-tab="fam" data-t="tabFamily"></button>
+            <button class="tab" data-tab="map" data-t="tabTerritory"></button>
+            <button class="tab" data-tab="mis" data-t="tabMissions"></button>
+            <button class="tab" data-tab="ach" data-t="tabAch"></button>
+            <button class="tab" data-tab="log" data-t="tabLedger"></button>
+            <button class="tab" data-tab="set" data-t="settings"></button>
+          </div>
+
+          <div data-pane="biz">
+            <div class="panehead">
+              <p class="label" style="margin:0" data-t="rackets"></p>
+              <div class="seg" id="qty"><button data-q="1" class="on">×1</button><button data-q="10">×10</button><button data-q="max">MAX</button></div>
+            </div>
+            <div id="rackets"></div>
+            <p class="label" style="margin-top:18px" data-t="upgrades"></p>
+            <div class="ups" id="ups"></div>
+          </div>
+
+          <div data-pane="heist" hidden>
+            <p class="note" data-t="heistInfo"></p>
+            <div class="item active-heist" id="heistActive" hidden></div>
+            <div class="list" id="heistList" style="margin-top:8px"></div>
+          </div>
+
+          <div data-pane="market" hidden>
+            <p class="note" data-t="mktInfo"></p>
+            <div class="panehead">
+              <div class="row" style="margin:0;gap:4px 16px"><span><span data-t="warehouse"></span>: <b id="whinfo"></b></span><span><span data-t="mktProfit"></span>: <b id="mprofit"></b></span></div>
+              <div class="btnrow"><div class="seg" id="mqty"><button data-q="1" class="on">×1</button><button data-q="10">×10</button><button data-q="100">×100</button><button data-q="max">MAX</button></div><button class="btn" id="whup"></button></div>
+            </div>
+            <div class="list" id="mktList"></div>
+          </div>
+
+          <div data-pane="fam" hidden>
+            <p class="note" data-t="famInfo"></p>
+            <div class="list" id="ltList"></div>
+          </div>
+
+          <div data-pane="map" hidden>
+            <div class="alert" id="attackAlert" hidden></div>
+            <div class="mapwrap">
+              <svg class="map" id="map" viewBox="0 0 400 260" role="img" aria-label="San Ardente"></svg>
+              <div class="dinfo" id="dinfo"></div>
+            </div>
+          </div>
+
+          <div data-pane="mis" hidden><div class="mlist" id="mlist"></div></div>
+          <div data-pane="ach" hidden>
+            <p class="row" style="margin:0 0 10px"><span id="achcount"></span><span id="achbonus"></span></p>
+            <div class="alist" id="alist"></div>
+          </div>
+          <div data-pane="set" hidden id="setPane"></div>
+          <div data-pane="log" hidden>
+            <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(230px,1fr));margin-top:0">
+              <div><p class="label" data-t="news"></p><div class="news" id="news"></div></div>
+              <div><p class="label" data-t="ledger"></p><dl class="dl" id="stats"></dl></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- OVERLAY -->
+<div class="overlay" id="ovSettings" hidden>
+  <div class="modal" role="dialog" aria-modal="true">
+    <h2 data-t="settings"></h2>
+    <div id="setBody">
+    <div class="setrow"><label data-t="language"></label><div class="seg" id="setLang"></div></div>
+    <div class="setrow"><label data-t="fps"></label><div class="seg" id="setFps"></div></div>
+    <div class="setrow"><label data-t="showFps"></label><div class="seg" id="setShowFps"></div></div>
+    <div class="setrow"><label data-t="bgAnim"></label><div class="seg" id="setBg"></div></div>
+    <div class="setrow"><label data-t="particles"></label><div class="seg" id="setPart"></div></div>
+    <div class="setrow"><label data-t="sound"></label><div class="seg" id="setSound"></div></div>
+    <div class="setrow"><label for="vol" data-t="volume"></label><input type="range" id="vol" min="0" max="100"></div>
+    <div class="actions">
+      <button class="btn" id="saveNow" data-t="saveNow"></button>
+      <button class="btn" id="tutReplayBtn" data-t="tutReplay"></button>
+      <button class="btn" id="resetBtn" data-t="resetGame"></button>
+      <button class="btn hot" id="closeSettings" data-t="back" style="margin-left:auto"></button>
+    </div>
+    <div id="resetConfirm" hidden>
+      <p class="warn" data-t="confirmReset"></p>
+      <div class="btnrow"><button class="btn hot" id="resetYes" data-t="yes"></button><button class="btn" id="resetNo" data-t="no"></button></div>
+    </div>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovPause" hidden>
+  <div class="modal" style="max-width:360px">
+    <h2 data-t="pause"></h2>
+    <div class="stack-gap">
+      <button class="btn hot wide" id="pResume" data-t="resume"></button>
+      <button class="btn wide" id="pSettings" data-t="settings"></button>
+      <button class="btn wide" id="pHow" data-t="howTo"></button>
+      <button class="btn wide" id="pMenu" data-t="mainMenu"></button>
+    </div>
+  </div>
+</div>
+
+<div class="overlay" id="ovHow" hidden>
+  <div class="modal howto">
+    <h2 data-t="howTo"></h2>
+    <div id="howText"></div>
+    <div class="actions"><button class="btn hot" id="closeHow" data-t="back"></button></div>
+  </div>
+</div>
+
+<div class="overlay" id="ovNew" hidden>
+  <div class="modal" style="max-width:400px">
+    <h2 data-t="newGame"></h2>
+    <p data-t="newGameConfirm"></p>
+    <div class="actions"><button class="btn hot" id="newYes" data-t="yes"></button><button class="btn" id="newNo" data-t="no"></button></div>
+  </div>
+</div>
+
+<div class="toasts" id="toasts"></div>
+
+<script>
+/* =================== LINGUE =================== */
+const L={
+it:{tagline:"Tycoon criminale · San Ardente",continue:"Continua",newGame:"Nuova partita",settings:"Impostazioni",howTo:"Come si gioca",back:"Indietro",resume:"Riprendi",mainMenu:"Menu principale",pause:"Pausa",
+language:"Lingua",fps:"Limite FPS",showFps:"Mostra FPS",particles:"Particelle",bgAnim:"Città animata",sound:"Audio",volume:"Volume",saveNow:"Salva ora",saved:"Partita salvata",resetGame:"Cancella partita",
+confirmReset:"Cancelli tutti i progressi, traguardi compresi. Non si può annullare.",yes:"Sì",no:"No",unlimited:"Max",on:"On",off:"Off",
+newGameConfirm:"Esiste già una partita salvata. Iniziarne una nuova la sovrascrive.",
+collect:"Riscuoti",perClick:"+${v} a colpo",wanted:"Livello ricercato",lawyerBtn:"Chiama l'avvocato · ${v}",heatStable:"stabile",
+crew:"La squadra",soldiers:"Soldati",capacity:"Racket gestibili",defense:"Forza difensiva",efficiency:"Efficienza",hire:"Recluta {n} · ${v}",
+lowEff:"Troppi racket per pochi uomini: rendono solo al {p}%. Recluta soldati.",
+tabBusiness:"Affari",tabTerritory:"Territori",tabMissions:"Missioni",tabAch:"Traguardi",tabLedger:"Registro",rackets:"Racket",upgrades:"Favori e potenziamenti",noUpgrades:"Nessun favore disponibile. Allarga gli affari.",
+each:"cad.",unlockAt:"Sblocca con 1 {r}",
+respect:"Rispetto",respectBonus:"Bonus incassi",respectOnRetire:"Al ritiro",retire:"Passa la mano al figlio",retireInfo:"Ricominci senza soldi, racket, soldati e territori, ma tieni rispetto e traguardi. Ogni punto di rispetto vale +10% sugli incassi.",confirm:"Conferma",cancel:"Annulla",
+district:"Territorio",required:"Soldati necessari",cost:"Costo operazione",chance:"Probabilità",bonus:"Bonus incassi",heatAdd:"Calore extra",conquer:"Attacca",owned:"Sotto il tuo controllo",selectDistrict:"Scegli un quartiere sulla mappa.",
+conquered:"{d} è tuo.",conquerFail:"L'assalto a {d} è fallito. Persi {n} soldati.",
+attackAlert:"La banda dei {g} attacca {d}! Forza nemica {p}. Tempo: {s}s",attackWon:"Hai respinto i {g} a {d}. Bottino: ${v}",attackLost:"I {g} ti hanno preso {d}. Persi {n} soldati.",
+missionPassed:"Missione compiuta",reward:"Ricompensa",allMissions:"Tutte le missioni completate. Sei il padrone di San Ardente.",missionN:"Missione {n}",
+achUnlocked:"Traguardo sbloccato",achCount:"{a} / {b} sbloccati",achBonus:"+{p}% incassi",
+news:"Cronaca",ledger:"Libro mastro",stTotal:"Incassato in totale",stClicks:"Colpi riscossi",stRaids:"Retate subite",stGen:"Generazione",stRepel:"Attacchi respinti",stTips:"Soffiate colte",stMissions:"Missioni compiute",stTime:"Tempo di gioco",
+raid:"RETATA! La polizia sequestra ${v} e arresta {n} soldati.",raidBanner:"Retata",tips:["Soffiata!","Carico perso","Debito saldato","Furgone blindato"],luck:"Colpo di fortuna: +${v}",
+offline:"Mentre eri via i tuoi uomini hanno raccolto ${v}.",intro:"San Ardente. Hai un garage, due amici e un telefono. Comincia a riscuotere.",newBiz:"Nuovo affare avviato: {r}.",favor:"Favore ottenuto: {u}.",lawyerNews:"L'avvocato ha fatto sparire qualche fascicolo.",retireNews:"Il vecchio boss si ritira. La generazione {g} eredita {r} punti di rispetto.",
+m_clicks:"Riscuoti {n} colpi",m_own:"Possiedi {n} × {r}",m_soldiers:"Recluta {n} soldati",m_earn:"Incassa ${n}",m_territory:"Controlla {n} territori",m_lawyer:"Chiama l'avvocato",m_ips:"Arriva a ${n}/s",m_repel:"Respingi un attacco rivale",m_gen:"Passa la mano al figlio",m_rewardRespect:"+{n} rispetto",
+a_clicks:"Riscuoti {n} colpi in totale",a_life:"Incassa ${n} in totale",a_ips:"Arriva a ${n}/s",a_soldiers:"Recluta {n} soldati",a_terr:"Controlla {n} territori",a_raids:"Subisci {n} retate",a_repel:"Respingi {n} attacchi",a_tips:"Cogli {n} soffiate",a_all:"Avvia tutti i racket",a_gen:"Arriva alla generazione {n}",a_mis:"Completa {n} missioni",a_stars:"Raggiungi 5 stelle",
+up_click:"Colpi ×{v}",up_racket:"{r} ×{v}",up_heat:"Calore −30%",up_crew:"Capacità e difesa ×1,5",
+howText:["Premi la <b>valigetta</b> per riscuotere. Con i soldi avvii i <b>racket</b>, che incassano da soli ogni secondo.","Ogni soldato gestisce un certo numero di racket. Se hai troppi affari e pochi uomini, l'<b>efficienza</b> crolla: recluta soldati.","Gli affari fanno salire il <b>livello ricercato</b>. A 5 stelle piene scatta una retata: perdi il 30% dei soldi e una parte dei soldati. L'avvocato abbassa il calore.","Nella scheda <b>Territori</b> conquisti i quartieri di San Ardente per un bonus sugli incassi. Le bande rivali poi attaccano: tieni abbastanza soldati per difenderti.","Segui le <b>missioni</b> per ricompense grosse. Ogni <b>traguardo</b> dà +2% permanente agli incassi.","Quando hai incassato abbastanza, <b>passa la mano al figlio</b>: ricominci con punti rispetto che moltiplicano tutto."],
+gangs:["Serpenti","Rojos","Fratelli Kovač","Dragoni"],
+racketNames:["Scommesse clandestine","Pizzo ai negozi","Officina auto rubate","Contrabbando","Night club","Autolavaggio di copertura","Casinò illegale","Controllo del porto","Politico a libro paga","Cartello internazionale"],
+tierNames:["capozona","rete fidata","monopolio","leggenda"],
+clickNames:["Tirapugni","Due scagnozzi","Pistola col silenziatore","SUV blindato","Squadra di riscossione"],
+heatNames:["Agente di quartiere","Ispettore compiacente","Commissario a libro paga","Giudice amico"],
+crewNames:["Addestramento","Armeria","Rete di vedette"],
+districts:["Porto Vecchio","Barrio Rojo","Zona Industriale","Downtown","Marina","Aeroporto"],
+missionTitles:["Primo giro","La bisca","Reclutamento","Il pizzo","Soldi veri","Prima zona","Motori rubati","Buon avvocato","Flusso continuo","Vita notturna","Espansione","Guerra tra bande","Pezzo grosso","Mezza città","Amici in alto","Eredità","Re di San Ardente","Fine dei giochi"],
+achNames:["Mani sporche","Esattore","Dita d'acciaio","Primi spiccioli","Milionario","Miliardario","Intoccabile","Flusso costante","Macchina da soldi","Plotone","Esercito privato","Bandiera piantata","Re della città","Prima retata","Fedina sporca","Nessuno passa","Fortezza","Orecchie ovunque","Impero completo","L'erede","Dinastia","Uomo d'onore","Padrino","Il più ricercato"],
+time:"{h}h {m}m"},
+
+en:{tagline:"Crime tycoon · San Ardente",continue:"Continue",newGame:"New game",settings:"Settings",howTo:"How to play",back:"Back",resume:"Resume",mainMenu:"Main menu",pause:"Paused",
+language:"Language",fps:"FPS limit",showFps:"Show FPS",particles:"Particles",bgAnim:"Animated city",sound:"Sound",volume:"Volume",saveNow:"Save now",saved:"Game saved",resetGame:"Delete save",
+confirmReset:"This deletes all progress, achievements included. It can't be undone.",yes:"Yes",no:"No",unlimited:"Max",on:"On",off:"Off",
+newGameConfirm:"A saved game already exists. Starting a new one overwrites it.",
+collect:"Collect",perClick:"+${v} per hit",wanted:"Wanted level",lawyerBtn:"Call the lawyer · ${v}",heatStable:"stable",
+crew:"The crew",soldiers:"Soldiers",capacity:"Rackets managed",defense:"Defense strength",efficiency:"Efficiency",hire:"Hire {n} · ${v}",
+lowEff:"Too many rackets for too few men: they earn only {p}%. Hire soldiers.",
+tabBusiness:"Business",tabTerritory:"Turf",tabMissions:"Missions",tabAch:"Achievements",tabLedger:"Ledger",rackets:"Rackets",upgrades:"Favors and upgrades",noUpgrades:"No favors available. Grow the business.",
+each:"each",unlockAt:"Unlock with 1 {r}",
+respect:"Respect",respectBonus:"Income bonus",respectOnRetire:"On retirement",retire:"Hand over to your son",retireInfo:"You restart with no cash, rackets, soldiers or turf, but keep respect and achievements. Each respect point gives +10% income.",confirm:"Confirm",cancel:"Cancel",
+district:"District",required:"Soldiers needed",cost:"Operation cost",chance:"Success chance",bonus:"Income bonus",heatAdd:"Extra heat",conquer:"Attack",owned:"Under your control",selectDistrict:"Pick a district on the map.",
+conquered:"{d} is yours.",conquerFail:"The assault on {d} failed. Lost {n} soldiers.",
+attackAlert:"The {g} gang is attacking {d}! Enemy strength {p}. Time: {s}s",attackWon:"You drove the {g} out of {d}. Loot: ${v}",attackLost:"The {g} took {d}. Lost {n} soldiers.",
+missionPassed:"Mission passed",reward:"Reward",allMissions:"All missions complete. You own San Ardente.",missionN:"Mission {n}",
+achUnlocked:"Achievement unlocked",achCount:"{a} / {b} unlocked",achBonus:"+{p}% income",
+news:"News",ledger:"Ledger",stTotal:"Total earned",stClicks:"Hits collected",stRaids:"Raids suffered",stGen:"Generation",stRepel:"Attacks repelled",stTips:"Tips caught",stMissions:"Missions passed",stTime:"Play time",
+raid:"RAID! Police seize ${v} and arrest {n} soldiers.",raidBanner:"Busted",tips:["Hot tip!","Lost cargo","Debt paid","Armored van"],luck:"Lucky break: +${v}",
+offline:"While you were away your men collected ${v}.",intro:"San Ardente. You have a garage, two friends and a phone. Start collecting.",newBiz:"New business started: {r}.",favor:"Favor gained: {u}.",lawyerNews:"The lawyer made a few files disappear.",retireNews:"The old boss retires. Generation {g} inherits {r} respect.",
+m_clicks:"Collect {n} hits",m_own:"Own {n} × {r}",m_soldiers:"Hire {n} soldiers",m_earn:"Earn ${n}",m_territory:"Control {n} districts",m_lawyer:"Call the lawyer",m_ips:"Reach ${n}/s",m_repel:"Repel a rival attack",m_gen:"Hand over to your son",m_rewardRespect:"+{n} respect",
+a_clicks:"Collect {n} hits total",a_life:"Earn ${n} total",a_ips:"Reach ${n}/s",a_soldiers:"Hire {n} soldiers",a_terr:"Control {n} districts",a_raids:"Suffer {n} raids",a_repel:"Repel {n} attacks",a_tips:"Catch {n} tips",a_all:"Start every racket",a_gen:"Reach generation {n}",a_mis:"Pass {n} missions",a_stars:"Hit 5 stars",
+up_click:"Hits ×{v}",up_racket:"{r} ×{v}",up_heat:"Heat −30%",up_crew:"Capacity and defense ×1.5",
+howText:["Tap the <b>briefcase</b> to collect. Use the cash to start <b>rackets</b>, which earn on their own every second.","Each soldier manages a number of rackets. With too many businesses and too few men, <b>efficiency</b> drops: hire soldiers.","Business raises your <b>wanted level</b>. At a full 5 stars a raid hits: you lose 30% of your cash and some soldiers. The lawyer lowers heat.","In the <b>Turf</b> tab you take over San Ardente's districts for an income bonus. Rival gangs then attack: keep enough soldiers to defend.","Follow the <b>missions</b> for big rewards. Every <b>achievement</b> gives a permanent +2% income.","Once you've earned enough, <b>hand over to your son</b>: you restart with respect points that multiply everything."],
+gangs:["Serpents","Rojos","Kovač Brothers","Dragons"],
+racketNames:["Underground betting","Shop protection","Chop shop","Smuggling","Nightclub","Car wash front","Illegal casino","Port control","Politician on payroll","International cartel"],
+tierNames:["turf boss","trusted network","monopoly","legend"],
+clickNames:["Brass knuckles","Two goons","Silenced pistol","Armored SUV","Collection crew"],
+heatNames:["Beat cop","Friendly inspector","Captain on payroll","Friendly judge"],
+crewNames:["Training","Armory","Lookout network"],
+districts:["Old Port","Barrio Rojo","Industrial Zone","Downtown","Marina","Airport"],
+missionTitles:["First round","The betting den","Recruitment","Protection","Real money","First turf","Stolen engines","Good lawyer","Steady flow","Nightlife","Expansion","Gang war","Big shot","Half the city","Friends in high places","Legacy","King of San Ardente","Endgame"],
+achNames:["Dirty hands","Collector","Iron fingers","Pocket change","Millionaire","Billionaire","Untouchable","Steady flow","Money machine","Platoon","Private army","Flag planted","King of the city","First raid","Rap sheet","None shall pass","Fortress","Ears everywhere","Full empire","The heir","Dynasty","Made man","Kingpin","Most wanted"],
+time:"{h}h {m}m"},
+
+es:{tagline:"Magnate del crimen · San Ardente",continue:"Continuar",newGame:"Nueva partida",settings:"Ajustes",howTo:"Cómo jugar",back:"Volver",resume:"Reanudar",mainMenu:"Menú principal",pause:"Pausa",
+language:"Idioma",fps:"Límite de FPS",showFps:"Mostrar FPS",particles:"Partículas",bgAnim:"Ciudad animada",sound:"Sonido",volume:"Volumen",saveNow:"Guardar ahora",saved:"Partida guardada",resetGame:"Borrar partida",
+confirmReset:"Se borra todo el progreso, logros incluidos. No se puede deshacer.",yes:"Sí",no:"No",unlimited:"Máx",on:"Sí",off:"No",
+newGameConfirm:"Ya hay una partida guardada. Empezar una nueva la sobrescribe.",
+collect:"Cobrar",perClick:"+${v} por golpe",wanted:"Nivel de búsqueda",lawyerBtn:"Llamar al abogado · ${v}",heatStable:"estable",
+crew:"La banda",soldiers:"Soldados",capacity:"Negocios gestionables",defense:"Fuerza defensiva",efficiency:"Eficiencia",hire:"Reclutar {n} · ${v}",
+lowEff:"Demasiados negocios para pocos hombres: rinden solo al {p}%. Recluta soldados.",
+tabBusiness:"Negocios",tabTerritory:"Territorios",tabMissions:"Misiones",tabAch:"Logros",tabLedger:"Registro",rackets:"Negocios sucios",upgrades:"Favores y mejoras",noUpgrades:"No hay favores disponibles. Haz crecer el negocio.",
+each:"c/u",unlockAt:"Se desbloquea con 1 {r}",
+respect:"Respeto",respectBonus:"Bonus de ingresos",respectOnRetire:"Al retirarte",retire:"Pasar el mando al hijo",retireInfo:"Empiezas sin dinero, negocios, soldados ni territorios, pero conservas respeto y logros. Cada punto de respeto da +10% de ingresos.",confirm:"Confirmar",cancel:"Cancelar",
+district:"Barrio",required:"Soldados necesarios",cost:"Coste de la operación",chance:"Probabilidad",bonus:"Bonus de ingresos",heatAdd:"Calor extra",conquer:"Atacar",owned:"Bajo tu control",selectDistrict:"Elige un barrio en el mapa.",
+conquered:"{d} es tuyo.",conquerFail:"El asalto a {d} fracasó. Perdiste {n} soldados.",
+attackAlert:"¡La banda de los {g} ataca {d}! Fuerza enemiga {p}. Tiempo: {s}s",attackWon:"Echaste a los {g} de {d}. Botín: ${v}",attackLost:"Los {g} te quitaron {d}. Perdiste {n} soldados.",
+missionPassed:"Misión cumplida",reward:"Recompensa",allMissions:"Todas las misiones completadas. San Ardente es tuya.",missionN:"Misión {n}",
+achUnlocked:"Logro desbloqueado",achCount:"{a} / {b} desbloqueados",achBonus:"+{p}% ingresos",
+news:"Crónica",ledger:"Libro de cuentas",stTotal:"Ganado en total",stClicks:"Golpes cobrados",stRaids:"Redadas sufridas",stGen:"Generación",stRepel:"Ataques repelidos",stTips:"Chivatazos",stMissions:"Misiones cumplidas",stTime:"Tiempo de juego",
+raid:"¡REDADA! La policía incauta ${v} y arresta a {n} soldados.",raidBanner:"Redada",tips:["¡Chivatazo!","Carga perdida","Deuda cobrada","Furgón blindado"],luck:"Golpe de suerte: +${v}",
+offline:"Mientras no estabas tus hombres cobraron ${v}.",intro:"San Ardente. Tienes un garaje, dos amigos y un teléfono. Empieza a cobrar.",newBiz:"Nuevo negocio: {r}.",favor:"Favor conseguido: {u}.",lawyerNews:"El abogado hizo desaparecer unos expedientes.",retireNews:"El viejo jefe se retira. La generación {g} hereda {r} puntos de respeto.",
+m_clicks:"Cobra {n} golpes",m_own:"Ten {n} × {r}",m_soldiers:"Recluta {n} soldados",m_earn:"Gana ${n}",m_territory:"Controla {n} barrios",m_lawyer:"Llama al abogado",m_ips:"Llega a ${n}/s",m_repel:"Repele un ataque rival",m_gen:"Pasa el mando al hijo",m_rewardRespect:"+{n} respeto",
+a_clicks:"Cobra {n} golpes en total",a_life:"Gana ${n} en total",a_ips:"Llega a ${n}/s",a_soldiers:"Recluta {n} soldados",a_terr:"Controla {n} barrios",a_raids:"Sufre {n} redadas",a_repel:"Repele {n} ataques",a_tips:"Atrapa {n} chivatazos",a_all:"Abre todos los negocios",a_gen:"Llega a la generación {n}",a_mis:"Cumple {n} misiones",a_stars:"Llega a 5 estrellas",
+up_click:"Golpes ×{v}",up_racket:"{r} ×{v}",up_heat:"Calor −30%",up_crew:"Capacidad y defensa ×1,5",
+howText:["Pulsa el <b>maletín</b> para cobrar. Con el dinero abres <b>negocios</b> que ganan solos cada segundo.","Cada soldado gestiona unos cuantos negocios. Si tienes demasiados y pocos hombres, la <b>eficiencia</b> cae: recluta soldados.","Los negocios suben tu <b>nivel de búsqueda</b>. Con 5 estrellas llenas llega una redada: pierdes el 30% del dinero y parte de los soldados. El abogado baja el calor.","En <b>Territorios</b> conquistas los barrios de San Ardente para un bonus de ingresos. Luego las bandas rivales atacan: ten soldados suficientes.","Sigue las <b>misiones</b> para grandes recompensas. Cada <b>logro</b> da +2% permanente de ingresos.","Cuando hayas ganado bastante, <b>pasa el mando al hijo</b>: empiezas de nuevo con puntos de respeto que lo multiplican todo."],
+gangs:["Serpientes","Rojos","Hermanos Kovač","Dragones"],
+racketNames:["Apuestas clandestinas","Extorsión a tiendas","Taller de coches robados","Contrabando","Club nocturno","Autolavado tapadera","Casino ilegal","Control del puerto","Político en nómina","Cártel internacional"],
+tierNames:["jefe de zona","red de confianza","monopolio","leyenda"],
+clickNames:["Puño americano","Dos matones","Pistola con silenciador","SUV blindado","Equipo de cobro"],
+heatNames:["Policía de barrio","Inspector amigo","Comisario en nómina","Juez amigo"],
+crewNames:["Entrenamiento","Armería","Red de vigías"],
+districts:["Puerto Viejo","Barrio Rojo","Zona Industrial","Centro","Marina","Aeropuerto"],
+missionTitles:["Primera ronda","La timba","Reclutamiento","La extorsión","Dinero de verdad","Primera zona","Motores robados","Buen abogado","Flujo continuo","Vida nocturna","Expansión","Guerra de bandas","Pez gordo","Media ciudad","Amigos poderosos","Herencia","Rey de San Ardente","Fin del juego"],
+achNames:["Manos sucias","Cobrador","Dedos de acero","Calderilla","Millonario","Multimillonario","Intocable","Flujo constante","Máquina de dinero","Pelotón","Ejército privado","Bandera plantada","Rey de la ciudad","Primera redada","Antecedentes","No pasarán","Fortaleza","Oídos en todas partes","Imperio completo","El heredero","Dinastía","Hombre de honor","Capo de capos","El más buscado"],
+time:"{h}h {m}m"},
+
+ru:{tagline:"Криминальный магнат · Сан-Ардента",continue:"Продолжить",newGame:"Новая игра",settings:"Настройки",howTo:"Как играть",back:"Назад",resume:"Продолжить",mainMenu:"Главное меню",pause:"Пауза",
+language:"Язык",fps:"Лимит FPS",showFps:"Показывать FPS",particles:"Частицы",bgAnim:"Анимация города",sound:"Звук",volume:"Громкость",saveNow:"Сохранить",saved:"Игра сохранена",resetGame:"Удалить сохранение",
+confirmReset:"Весь прогресс, включая достижения, будет удалён. Отменить нельзя.",yes:"Да",no:"Нет",unlimited:"Макс",on:"Вкл",off:"Выкл",
+newGameConfirm:"Сохранение уже есть. Новая игра его перезапишет.",
+collect:"Собрать",perClick:"+${v} за удар",wanted:"Уровень розыска",lawyerBtn:"Вызвать адвоката · ${v}",heatStable:"стабильно",
+crew:"Банда",soldiers:"Бойцы",capacity:"Под контролем бизнесов",defense:"Сила обороны",efficiency:"Эффективность",hire:"Нанять {n} · ${v}",
+lowEff:"Слишком много бизнеса на мало людей: доход только {p}%. Наймите бойцов.",
+tabBusiness:"Бизнес",tabTerritory:"Районы",tabMissions:"Миссии",tabAch:"Достижения",tabLedger:"Журнал",rackets:"Схемы",upgrades:"Услуги и улучшения",noUpgrades:"Нет доступных улучшений. Расширяйте бизнес.",
+each:"шт.",unlockAt:"Откроется с 1 «{r}»",
+respect:"Уважение",respectBonus:"Бонус дохода",respectOnRetire:"При уходе",retire:"Передать дела сыну",retireInfo:"Вы начинаете без денег, бизнеса, бойцов и районов, но сохраняете уважение и достижения. Каждое очко уважения даёт +10% дохода.",confirm:"Подтвердить",cancel:"Отмена",
+district:"Район",required:"Нужно бойцов",cost:"Стоимость операции",chance:"Шанс успеха",bonus:"Бонус дохода",heatAdd:"Доп. розыск",conquer:"Атаковать",owned:"Под вашим контролем",selectDistrict:"Выберите район на карте.",
+conquered:"{d} теперь ваш.",conquerFail:"Штурм района {d} провалился. Потеряно бойцов: {n}.",
+attackAlert:"Банда «{g}» атакует {d}! Сила врага {p}. Время: {s} с",attackWon:"Вы отбили {d} у банды «{g}». Добыча: ${v}",attackLost:"Банда «{g}» захватила {d}. Потеряно бойцов: {n}.",
+missionPassed:"Миссия выполнена",reward:"Награда",allMissions:"Все миссии выполнены. Сан-Ардента ваша.",missionN:"Миссия {n}",
+achUnlocked:"Достижение получено",achCount:"Получено {a} из {b}",achBonus:"+{p}% дохода",
+news:"Хроника",ledger:"Бухгалтерия",stTotal:"Заработано всего",stClicks:"Собрано ударов",stRaids:"Облав пережито",stGen:"Поколение",stRepel:"Атак отбито",stTips:"Наводок поймано",stMissions:"Миссий выполнено",stTime:"Время в игре",
+raid:"ОБЛАВА! Полиция изъяла ${v} и арестовала бойцов: {n}.",raidBanner:"Облава",tips:["Наводка!","Потерянный груз","Долг возвращён","Инкассатор"],luck:"Удача: +${v}",
+offline:"Пока вас не было, ваши люди собрали ${v}.",intro:"Сан-Ардента. У вас гараж, два друга и телефон. Начинайте собирать.",newBiz:"Новый бизнес: {r}.",favor:"Получено: {u}.",lawyerNews:"Адвокат заставил исчезнуть пару дел.",retireNews:"Старый босс уходит. Поколение {g} наследует {r} уважения.",
+m_clicks:"Соберите {n} ударов",m_own:"Имейте {n} × «{r}»",m_soldiers:"Наймите {n} бойцов",m_earn:"Заработайте ${n}",m_territory:"Контролируйте районов: {n}",m_lawyer:"Вызовите адвоката",m_ips:"Достигните ${n}/с",m_repel:"Отбейте атаку соперников",m_gen:"Передайте дела сыну",m_rewardRespect:"+{n} уважения",
+a_clicks:"Соберите {n} ударов всего",a_life:"Заработайте ${n} всего",a_ips:"Достигните ${n}/с",a_soldiers:"Наймите {n} бойцов",a_terr:"Контролируйте районов: {n}",a_raids:"Переживите облав: {n}",a_repel:"Отбейте атак: {n}",a_tips:"Поймайте наводок: {n}",a_all:"Запустите все схемы",a_gen:"Дойдите до поколения {n}",a_mis:"Выполните миссий: {n}",a_stars:"Получите 5 звёзд",
+up_click:"Удары ×{v}",up_racket:"«{r}» ×{v}",up_heat:"Розыск −30%",up_crew:"Вместимость и оборона ×1,5",
+howText:["Нажимайте на <b>кейс</b>, чтобы собирать деньги. На них запускайте <b>схемы</b>, которые приносят доход каждую секунду.","Каждый боец управляет несколькими схемами. Если бизнеса много, а людей мало, <b>эффективность</b> падает: нанимайте бойцов.","Бизнес поднимает <b>уровень розыска</b>. При 5 полных звёздах будет облава: вы теряете 30% денег и часть бойцов. Адвокат снижает розыск.","Во вкладке <b>Районы</b> вы захватываете кварталы Сан-Ардента ради бонуса к доходу. Потом соперники атакуют: держите достаточно бойцов.","Выполняйте <b>миссии</b> ради крупных наград. Каждое <b>достижение</b> даёт +2% к доходу навсегда.","Когда заработаете достаточно, <b>передайте дела сыну</b>: начнёте заново с очками уважения, которые умножают всё."],
+gangs:["Змеи","Рохос","Братья Ковач","Драконы"],
+racketNames:["Подпольные ставки","Крышевание магазинов","Разборка угнанных авто","Контрабанда","Ночной клуб","Автомойка-прикрытие","Нелегальное казино","Контроль порта","Политик на зарплате","Международный картель"],
+tierNames:["хозяин района","надёжная сеть","монополия","легенда"],
+clickNames:["Кастет","Двое громил","Пистолет с глушителем","Бронированный внедорожник","Бригада сборщиков"],
+heatNames:["Участковый","Сговорчивый инспектор","Комиссар на зарплате","Свой судья"],
+crewNames:["Тренировки","Арсенал","Сеть наблюдателей"],
+districts:["Старый порт","Баррио Рохо","Промзона","Даунтаун","Марина","Аэропорт"],
+missionTitles:["Первый круг","Букмекерская","Вербовка","Крыша","Настоящие деньги","Первый район","Угнанные моторы","Хороший адвокат","Постоянный поток","Ночная жизнь","Расширение","Война банд","Большая шишка","Полгорода","Друзья наверху","Наследство","Король Сан-Ардента","Финал"],
+achNames:["Грязные руки","Сборщик","Стальные пальцы","Первая мелочь","Миллионер","Миллиардер","Неприкасаемый","Стабильный поток","Денежная машина","Взвод","Частная армия","Флаг поднят","Король города","Первая облава","Богатое досье","Не пройдут","Крепость","Уши повсюду","Полная империя","Наследник","Династия","Человек чести","Крёстный отец","Самый разыскиваемый"],
+time:"{h} ч {m} мин"}
+};
+
+
+const L2={
+it:{tabHeist:"Colpi",tabMarket:"Mercato nero",tabFamily:"Luogotenenti",
+heistNames:["Gioielleria","Furgone portavalori","Banca di quartiere","Casinò sul lungomare","Nave da carico","Riserva federale"],
+crewReq:"Soldati",prepCost:"Preparazione",duration:"Durata",successCh:"Successo",payout:"Bottino",startHeist:"Avvia colpo",
+heistRunning:"Colpo in corso: {h}",heistRem:"{s}s rimanenti · {n} soldati impegnati",heistOk:"Colpo riuscito: {h}. Bottino ${v}.",heistFail:"Colpo fallito: {h}. Persi {n} soldati.",heistOkBig:"Colpo riuscito",heistFailBig:"Colpo fallito",
+heistInfo:"Manda la squadra a rapinare. I soldati impegnati non difendono i territori e non gestiscono racket finché non tornano. Ogni colpo alza il calore.",heistLocked:"Si sblocca con ${v} incassati in totale",
+goods:["Sigari cubani","Orologi di lusso","Opere d'arte","Diamanti","Auto d'epoca","Yacht rubati"],
+price:"Prezzo",held:"In magazzino",avg:"Medio",buy:"Compra",sell:"Vendi",warehouse:"Magazzino",whCap:"{a} / {b}",whUp:"Amplia magazzino · ${v}",mktProfit:"Profitto",
+mktInfo:"I prezzi cambiano ogni due secondi e a volte crollano o schizzano in alto. Compra basso, rivendi alto.",lockedGood:"Si sblocca con ${v} incassati",
+lieutNames:["Il Contabile","L'Avvocato","L'Hacker","L'Autista","Il Sicario"],
+lieutDesc:["+10% incassi per livello","−6% calore e −7% costo avvocato per livello","+4% successo dei colpi per livello","−6% durata dei colpi per livello","+15% forza difensiva per livello"],
+level:"Liv. {n}/{m}",hireLt:"Ingaggia · ${v}",upLt:"Promuovi · ${v}",maxed:"Al massimo",famInfo:"Specialisti con bonus permanenti. Restano finché non passi la mano al figlio.",ltNews:"{l} sale al livello {n}.",
+combo:"COMBO ×{v}",
+tutNext:"Avanti",tutSkip:"Salta",tutDone:"Inizia a giocare",tutReplay:"Rivedi tutorial",tutStep:"Tutorial · {a}/{b}",
+tut:[["Benvenuto a San Ardente","Hai un garage, due amici e un telefono. L'obiettivo è diventare il boss della città. Ti mostro le basi in pochi passi.",""],
+["Riscuoti","Premi la valigetta per fare soldi. Se premi veloce sale la combo e ogni colpo vale di più.","Raccogli $15"],
+["Il primo racket","I racket incassano da soli ogni secondo. Compra le Scommesse clandestine.","Compra 1 racket"],
+["Le missioni","Qui c'è sempre la missione attuale. Completale per ricompense grosse.",""],
+["La squadra","Ogni soldato gestisce 4 racket. Con troppi affari e pochi uomini gli incassi calano. I soldati servono anche per colpi e territori.",""],
+["Livello ricercato","Più affari fai, più la polizia ti cerca. Con 5 stelle piene arriva una retata. L'avvocato abbassa il calore.",""],
+["Il resto dell'impero","Da queste schede gestisci colpi, mercato nero, luogotenenti, territori, missioni e traguardi. Ogni tanto arriverà anche una decisione da prendere.",""],
+["Impostazioni","Lingua, FPS, audio ed effetti si cambiano qui. Da qui puoi anche rivedere questo tutorial. Buona fortuna, boss.",""]],
+evTitle:["Un giornalista ficcanaso","Proposta di tregua","Poliziotto corrotto","Una talpa nella squadra","Un carico misterioso","Matrimonio in famiglia"],
+evDesc:["Sta scrivendo un'inchiesta sui tuoi affari.","Una banda rivale offre una tregua in cambio di soldi.","Un agente ti ferma e chiede una mazzetta.","Qualcuno della squadra parla con la polizia.","Un contatto ti offre una quota di una spedizione.","Una grande festa attirerebbe nuove reclute."],
+evA:["Compra il suo silenzio (${v}) · calore −20","Paga (${v}) · niente attacchi per un po'","Paga (${v}) · calore −35","Fai pulizia · −5% soldati, calore −15","Investi (${v}) · 55% di triplicare","Organizza la festa (${v}) · +10% soldati"],
+evB:["Ignoralo · calore +25","Rifiuta · attaccheranno presto","Rifiuta · 50% calore +30","Lascia stare · calore +40","Passa la mano","Festa piccola · nessun effetto"],
+evExpire:"Decidi entro {s}s, poi vale la seconda scelta",
+resHeat:"Calore {n}",resTruce:"Tregua firmata",resWar:"Le bande preparano un attacco",resLucky:"Ti è andata bene",resPurge:"Eliminati {n} traditori",resGain:"+${v}",resLost:"Investimento perso",resNothing:"Nessun effetto",resRecruits:"+{n} soldati",
+m_heist:"Colpi riusciti: {n}",m_lieut:"Ingaggia un luogotenente",m_profit:"Guadagna ${n} dal mercato nero",m_events:"Decisioni prese: {n}",m_lieutAll:"Porta tutti i luogotenenti al livello {n}",
+a_heists:"Colpi riusciti: {n}",a_profit:"Guadagna ${n} dal mercato nero",a_combo:"Arriva alla combo ×3",a_events:"Decisioni prese: {n}",a_ltmax:"Tutti i luogotenenti al livello 10",
+stHeists:"Colpi riusciti",stProfit:"Profitto dal mercato",stEvents:"Decisioni prese",
+howExtra:"Nella scheda <b>Colpi</b> mandi la squadra a rapinare per bottini enormi. Nel <b>Mercato nero</b> compri e rivendi merce a prezzi che cambiano. I <b>luogotenenti</b> danno bonus permanenti. Ogni tanto arriva una <b>decisione</b> da prendere: scegli bene.",
+missionTitles:["Primo giro","La bisca","Reclutamento","Il pizzo","Primo colpo","Soldi veri","Uomo di fiducia","Prima zona","Compra e vendi","Motori rubati","Buon avvocato","Flusso continuo","Banda di rapinatori","Vita notturna","Espansione","Guerra tra bande","Scelte difficili","Pezzo grosso","Mezza città","Amici in alto","Eredità","Consiglio di famiglia","Re di San Ardente","Fine dei giochi"],
+achNames:["Mani sporche","Esattore","Dita d'acciaio","Primi spiccioli","Milionario","Miliardario","Intoccabile","Flusso costante","Macchina da soldi","Plotone","Esercito privato","Bandiera piantata","Re della città","Prima retata","Fedina sporca","Nessuno passa","Fortezza","Orecchie ovunque","Impero completo","L'erede","Dinastia","Uomo d'onore","Padrino","Il più ricercato","Primo bottino","Mente criminale","Lupo del mercato","Mano veloce","Il decisore","Corte completa"]},
+
+en:{tabHeist:"Heists",tabMarket:"Black market",tabFamily:"Lieutenants",
+heistNames:["Jewelry store","Armored truck","Neighborhood bank","Seafront casino","Cargo ship","Federal reserve"],
+crewReq:"Soldiers",prepCost:"Prep",duration:"Duration",successCh:"Success",payout:"Payout",startHeist:"Start heist",
+heistRunning:"Heist in progress: {h}",heistRem:"{s}s left · {n} soldiers busy",heistOk:"Heist done: {h}. Payout ${v}.",heistFail:"Heist failed: {h}. Lost {n} soldiers.",heistOkBig:"Heist complete",heistFailBig:"Heist failed",
+heistInfo:"Send the crew on robberies. Soldiers on a heist don't defend turf or manage rackets until they return. Every heist raises heat.",heistLocked:"Unlocks at ${v} earned in total",
+goods:["Cuban cigars","Luxury watches","Artworks","Diamonds","Vintage cars","Stolen yachts"],
+price:"Price",held:"In stock",avg:"Avg",buy:"Buy",sell:"Sell",warehouse:"Warehouse",whCap:"{a} / {b}",whUp:"Expand warehouse · ${v}",mktProfit:"Profit",
+mktInfo:"Prices move every two seconds and sometimes crash or spike. Buy low, sell high.",lockedGood:"Unlocks at ${v} earned",
+lieutNames:["The Accountant","The Lawyer","The Hacker","The Driver","The Enforcer"],
+lieutDesc:["+10% income per level","−6% heat and −7% lawyer cost per level","+4% heist success per level","−6% heist duration per level","+15% defense per level"],
+level:"Lv. {n}/{m}",hireLt:"Recruit · ${v}",upLt:"Promote · ${v}",maxed:"Maxed",famInfo:"Specialists with permanent bonuses. They stay until you hand over to your son.",ltNews:"{l} reaches level {n}.",
+combo:"COMBO ×{v}",
+tutNext:"Next",tutSkip:"Skip",tutDone:"Start playing",tutReplay:"Replay tutorial",tutStep:"Tutorial · {a}/{b}",
+tut:[["Welcome to San Ardente","You've got a garage, two friends and a phone. The goal is to become the city's boss. Here are the basics in a few steps.",""],
+["Collect","Tap the briefcase to make money. Tap fast to build a combo and every hit pays more.","Collect $15"],
+["Your first racket","Rackets earn on their own every second. Buy Underground betting.","Buy 1 racket"],
+["Missions","Your current mission is always here. Complete them for big rewards.",""],
+["The crew","Each soldier manages 4 rackets. With too much business and too few men, income drops. Soldiers also run heists and take turf.",""],
+["Wanted level","The more business you run, the more the police look for you. At a full 5 stars a raid hits. The lawyer lowers heat.",""],
+["The rest of the empire","These tabs hold heists, the black market, lieutenants, turf, missions and achievements. Now and then you'll also face a decision.",""],
+["Settings","Change language, FPS, sound and effects here. You can also replay this tutorial from here. Good luck, boss.",""]],
+evTitle:["A nosy reporter","Truce offer","Dirty cop","A rat in the crew","Mystery shipment","Family wedding"],
+evDesc:["He's writing an exposé on your business.","A rival gang offers a truce for cash.","An officer stops you and asks for a bribe.","Someone in the crew is talking to the police.","A contact offers you a cut of a shipment.","A big party would draw new recruits."],
+evA:["Buy his silence (${v}) · heat −20","Pay (${v}) · no attacks for a while","Pay (${v}) · heat −35","Clean house · −5% soldiers, heat −15","Invest (${v}) · 55% to triple","Throw the party (${v}) · +10% soldiers"],
+evB:["Ignore him · heat +25","Refuse · they'll attack soon","Refuse · 50% heat +30","Let it go · heat +40","Pass","Keep it small · no effect"],
+evExpire:"Decide within {s}s, then the second option applies",
+resHeat:"Heat {n}",resTruce:"Truce signed",resWar:"The gangs are preparing an attack",resLucky:"You got lucky",resPurge:"{n} traitors removed",resGain:"+${v}",resLost:"Investment lost",resNothing:"No effect",resRecruits:"+{n} soldiers",
+m_heist:"Successful heists: {n}",m_lieut:"Recruit a lieutenant",m_profit:"Make ${n} on the black market",m_events:"Decisions made: {n}",m_lieutAll:"Get every lieutenant to level {n}",
+a_heists:"Successful heists: {n}",a_profit:"Make ${n} on the black market",a_combo:"Hit a ×3 combo",a_events:"Decisions made: {n}",a_ltmax:"Every lieutenant at level 10",
+stHeists:"Successful heists",stProfit:"Market profit",stEvents:"Decisions made",
+howExtra:"In <b>Heists</b> you send the crew on robberies for huge payouts. On the <b>Black market</b> you buy and resell goods at shifting prices. <b>Lieutenants</b> give permanent bonuses. Now and then a <b>decision</b> shows up: choose wisely.",
+missionTitles:["First round","The betting den","Recruitment","Protection","First score","Real money","Right-hand man","First turf","Buy and sell","Stolen engines","Good lawyer","Steady flow","Crew of thieves","Nightlife","Expansion","Gang war","Hard choices","Big shot","Half the city","Friends in high places","Legacy","Family council","King of San Ardente","Endgame"],
+achNames:["Dirty hands","Collector","Iron fingers","Pocket change","Millionaire","Billionaire","Untouchable","Steady flow","Money machine","Platoon","Private army","Flag planted","King of the city","First raid","Rap sheet","None shall pass","Fortress","Ears everywhere","Full empire","The heir","Dynasty","Made man","Kingpin","Most wanted","First haul","Criminal mastermind","Market wolf","Quick hands","Decision maker","Full court"]},
+
+es:{tabHeist:"Golpes",tabMarket:"Mercado negro",tabFamily:"Lugartenientes",
+heistNames:["Joyería","Furgón blindado","Banco del barrio","Casino del malecón","Buque de carga","Reserva federal"],
+crewReq:"Soldados",prepCost:"Preparación",duration:"Duración",successCh:"Éxito",payout:"Botín",startHeist:"Iniciar golpe",
+heistRunning:"Golpe en curso: {h}",heistRem:"{s}s restantes · {n} soldados ocupados",heistOk:"Golpe logrado: {h}. Botín ${v}.",heistFail:"Golpe fallido: {h}. Perdiste {n} soldados.",heistOkBig:"Golpe logrado",heistFailBig:"Golpe fallido",
+heistInfo:"Manda a la banda a robar. Los soldados en un golpe no defienden territorios ni gestionan negocios hasta que vuelven. Cada golpe sube el calor.",heistLocked:"Se desbloquea con ${v} ganados en total",
+goods:["Puros cubanos","Relojes de lujo","Obras de arte","Diamantes","Coches clásicos","Yates robados"],
+price:"Precio",held:"En almacén",avg:"Medio",buy:"Comprar",sell:"Vender",warehouse:"Almacén",whCap:"{a} / {b}",whUp:"Ampliar almacén · ${v}",mktProfit:"Beneficio",
+mktInfo:"Los precios cambian cada dos segundos y a veces se hunden o se disparan. Compra barato, vende caro.",lockedGood:"Se desbloquea con ${v} ganados",
+lieutNames:["El Contable","El Abogado","El Hacker","El Chófer","El Sicario"],
+lieutDesc:["+10% de ingresos por nivel","−6% de calor y −7% coste del abogado por nivel","+4% de éxito en golpes por nivel","−6% de duración de golpes por nivel","+15% de defensa por nivel"],
+level:"Nv. {n}/{m}",hireLt:"Contratar · ${v}",upLt:"Ascender · ${v}",maxed:"Al máximo",famInfo:"Especialistas con bonus permanentes. Se quedan hasta que pasas el mando al hijo.",ltNews:"{l} sube al nivel {n}.",
+combo:"COMBO ×{v}",
+tutNext:"Siguiente",tutSkip:"Saltar",tutDone:"Empezar a jugar",tutReplay:"Ver el tutorial otra vez",tutStep:"Tutorial · {a}/{b}",
+tut:[["Bienvenido a San Ardente","Tienes un garaje, dos amigos y un teléfono. El objetivo es ser el jefe de la ciudad. Te enseño lo básico en pocos pasos.",""],
+["Cobra","Pulsa el maletín para ganar dinero. Si pulsas rápido sube el combo y cada golpe vale más.","Consigue $15"],
+["Tu primer negocio","Los negocios ganan solos cada segundo. Compra Apuestas clandestinas.","Compra 1 negocio"],
+["Las misiones","Aquí siempre está la misión actual. Complétalas para grandes recompensas.",""],
+["La banda","Cada soldado gestiona 4 negocios. Con demasiados negocios y pocos hombres, los ingresos bajan. Los soldados también sirven para golpes y territorios.",""],
+["Nivel de búsqueda","Cuantos más negocios, más te busca la policía. Con 5 estrellas llenas llega una redada. El abogado baja el calor.",""],
+["El resto del imperio","En estas pestañas tienes golpes, mercado negro, lugartenientes, territorios, misiones y logros. De vez en cuando tendrás que tomar una decisión.",""],
+["Ajustes","Aquí cambias idioma, FPS, sonido y efectos. Desde aquí también puedes repetir este tutorial. Suerte, jefe.",""]],
+evTitle:["Un periodista entrometido","Oferta de tregua","Policía corrupto","Un soplón en la banda","Cargamento misterioso","Boda en la familia"],
+evDesc:["Está escribiendo un reportaje sobre tus negocios.","Una banda rival ofrece una tregua a cambio de dinero.","Un agente te para y pide un soborno.","Alguien de la banda habla con la policía.","Un contacto te ofrece una parte de un envío.","Una gran fiesta atraería nuevos reclutas."],
+evA:["Compra su silencio (${v}) · calor −20","Paga (${v}) · sin ataques por un tiempo","Paga (${v}) · calor −35","Haz limpieza · −5% soldados, calor −15","Invierte (${v}) · 55% de triplicar","Organiza la fiesta (${v}) · +10% soldados"],
+evB:["Ignóralo · calor +25","Rechaza · atacarán pronto","Rechaza · 50% calor +30","Déjalo · calor +40","Paso","Fiesta pequeña · sin efecto"],
+evExpire:"Decide en {s}s o se aplicará la segunda opción",
+resHeat:"Calor {n}",resTruce:"Tregua firmada",resWar:"Las bandas preparan un ataque",resLucky:"Tuviste suerte",resPurge:"{n} traidores eliminados",resGain:"+${v}",resLost:"Inversión perdida",resNothing:"Sin efecto",resRecruits:"+{n} soldados",
+m_heist:"Golpes exitosos: {n}",m_lieut:"Contrata a un lugarteniente",m_profit:"Gana ${n} en el mercado negro",m_events:"Decisiones tomadas: {n}",m_lieutAll:"Sube a todos los lugartenientes al nivel {n}",
+a_heists:"Golpes exitosos: {n}",a_profit:"Gana ${n} en el mercado negro",a_combo:"Llega a combo ×3",a_events:"Decisiones tomadas: {n}",a_ltmax:"Todos los lugartenientes al nivel 10",
+stHeists:"Golpes exitosos",stProfit:"Beneficio del mercado",stEvents:"Decisiones tomadas",
+howExtra:"En <b>Golpes</b> mandas a la banda a robar por botines enormes. En el <b>Mercado negro</b> compras y revendes mercancía a precios cambiantes. Los <b>lugartenientes</b> dan bonus permanentes. De vez en cuando llega una <b>decisión</b>: elige bien.",
+missionTitles:["Primera ronda","La timba","Reclutamiento","La extorsión","Primer golpe","Dinero de verdad","Mano derecha","Primera zona","Compra y vende","Motores robados","Buen abogado","Flujo continuo","Banda de atracadores","Vida nocturna","Expansión","Guerra de bandas","Decisiones difíciles","Pez gordo","Media ciudad","Amigos poderosos","Herencia","Consejo de familia","Rey de San Ardente","Fin del juego"],
+achNames:["Manos sucias","Cobrador","Dedos de acero","Calderilla","Millonario","Multimillonario","Intocable","Flujo constante","Máquina de dinero","Pelotón","Ejército privado","Bandera plantada","Rey de la ciudad","Primera redada","Antecedentes","No pasarán","Fortaleza","Oídos en todas partes","Imperio completo","El heredero","Dinastía","Hombre de honor","Capo de capos","El más buscado","Primer botín","Mente criminal","Lobo del mercado","Manos rápidas","El que decide","Corte completa"]},
+
+ru:{tabHeist:"Налёты",tabMarket:"Чёрный рынок",tabFamily:"Лейтенанты",
+heistNames:["Ювелирный магазин","Инкассаторская машина","Районный банк","Казино на набережной","Грузовое судно","Федеральный резерв"],
+crewReq:"Бойцы",prepCost:"Подготовка",duration:"Длительность",successCh:"Успех",payout:"Добыча",startHeist:"Начать налёт",
+heistRunning:"Идёт налёт: {h}",heistRem:"Осталось {s} с · занято бойцов: {n}",heistOk:"Налёт удался: {h}. Добыча ${v}.",heistFail:"Налёт провалился: {h}. Потеряно бойцов: {n}.",heistOkBig:"Налёт удался",heistFailBig:"Налёт провален",
+heistInfo:"Отправляйте банду на ограбления. Бойцы на налёте не защищают районы и не управляют схемами, пока не вернутся. Каждый налёт повышает розыск.",heistLocked:"Откроется после ${v} заработка",
+goods:["Кубинские сигары","Элитные часы","Произведения искусства","Бриллианты","Ретро-автомобили","Угнанные яхты"],
+price:"Цена",held:"На складе",avg:"Средняя",buy:"Купить",sell:"Продать",warehouse:"Склад",whCap:"{a} / {b}",whUp:"Расширить склад · ${v}",mktProfit:"Прибыль",
+mktInfo:"Цены меняются каждые две секунды, иногда резко падают или взлетают. Покупайте дёшево, продавайте дорого.",lockedGood:"Откроется после ${v} заработка",
+lieutNames:["Бухгалтер","Адвокат","Хакер","Водитель","Силовик"],
+lieutDesc:["+10% дохода за уровень","−6% розыска и −7% цены адвоката за уровень","+4% успеха налётов за уровень","−6% длительности налётов за уровень","+15% обороны за уровень"],
+level:"Ур. {n}/{m}",hireLt:"Нанять · ${v}",upLt:"Повысить · ${v}",maxed:"Максимум",famInfo:"Специалисты с постоянными бонусами. Остаются, пока вы не передадите дела сыну.",ltNews:"{l}: уровень {n}.",
+combo:"КОМБО ×{v}",
+tutNext:"Далее",tutSkip:"Пропустить",tutDone:"Начать игру",tutReplay:"Пройти обучение снова",tutStep:"Обучение · {a}/{b}",
+tut:[["Добро пожаловать в Сан-Ардента","У вас гараж, два друга и телефон. Цель: стать боссом города. Вот основы в нескольких шагах.",""],
+["Собирайте","Нажимайте на кейс, чтобы зарабатывать. Быстрые нажатия дают комбо, и каждый удар приносит больше.","Соберите $15"],
+["Первая схема","Схемы приносят доход сами каждую секунду. Купите «Подпольные ставки».","Купите 1 схему"],
+["Миссии","Здесь всегда текущая миссия. Выполняйте их ради крупных наград.",""],
+["Банда","Каждый боец управляет 4 схемами. Если бизнеса много, а людей мало, доход падает. Бойцы нужны и для налётов, и для районов.",""],
+["Уровень розыска","Чем больше бизнеса, тем активнее вас ищет полиция. При 5 полных звёздах будет облава. Адвокат снижает розыск.",""],
+["Остальная империя","В этих вкладках налёты, чёрный рынок, лейтенанты, районы, миссии и достижения. Иногда придётся принимать решения.",""],
+["Настройки","Здесь меняются язык, FPS, звук и эффекты. Отсюда же можно пройти обучение снова. Удачи, босс.",""]],
+evTitle:["Любопытный журналист","Предложение перемирия","Продажный коп","Крыса в банде","Загадочный груз","Свадьба в семье"],
+evDesc:["Он пишет расследование о вашем бизнесе.","Соперники предлагают перемирие за деньги.","Полицейский останавливает вас и просит взятку.","Кто-то из банды говорит с полицией.","Контакт предлагает долю в поставке.","Большой праздник привлёк бы новичков."],
+evA:["Купить молчание (${v}) · розыск −20","Заплатить (${v}) · без атак какое-то время","Заплатить (${v}) · розыск −35","Навести порядок · −5% бойцов, розыск −15","Вложить (${v}) · 55% утроить","Устроить праздник (${v}) · +10% бойцов"],
+evB:["Игнорировать · розыск +25","Отказать · скоро нападут","Отказать · 50% розыск +30","Оставить как есть · розыск +40","Пропустить","Скромно · без эффекта"],
+evExpire:"Решите за {s} с, иначе сработает второй вариант",
+resHeat:"Розыск {n}",resTruce:"Перемирие заключено",resWar:"Банды готовят атаку",resLucky:"Повезло",resPurge:"Убрано предателей: {n}",resGain:"+${v}",resLost:"Вложение потеряно",resNothing:"Без последствий",resRecruits:"+{n} бойцов",
+m_heist:"Успешных налётов: {n}",m_lieut:"Наймите лейтенанта",m_profit:"Заработайте ${n} на чёрном рынке",m_events:"Принято решений: {n}",m_lieutAll:"Поднимите всех лейтенантов до уровня {n}",
+a_heists:"Успешных налётов: {n}",a_profit:"Заработайте ${n} на чёрном рынке",a_combo:"Наберите комбо ×3",a_events:"Принято решений: {n}",a_ltmax:"Все лейтенанты на 10 уровне",
+stHeists:"Успешных налётов",stProfit:"Прибыль рынка",stEvents:"Принято решений",
+howExtra:"Во вкладке <b>Налёты</b> вы отправляете банду на ограбления ради огромной добычи. На <b>чёрном рынке</b> покупаете и перепродаёте товар по меняющимся ценам. <b>Лейтенанты</b> дают постоянные бонусы. Иногда нужно принять <b>решение</b>: выбирайте с умом.",
+missionTitles:["Первый круг","Букмекерская","Вербовка","Крыша","Первый налёт","Настоящие деньги","Правая рука","Первый район","Купи-продай","Угнанные моторы","Хороший адвокат","Постоянный поток","Банда грабителей","Ночная жизнь","Расширение","Война банд","Трудный выбор","Большая шишка","Полгорода","Друзья наверху","Наследство","Семейный совет","Король Сан-Ардента","Финал"],
+achNames:["Грязные руки","Сборщик","Стальные пальцы","Первая мелочь","Миллионер","Миллиардер","Неприкасаемый","Стабильный поток","Денежная машина","Взвод","Частная армия","Флаг поднят","Король города","Первая облава","Богатое досье","Не пройдут","Крепость","Уши повсюду","Полная империя","Наследник","Династия","Человек чести","Крёстный отец","Самый разыскиваемый","Первая добыча","Криминальный гений","Рыночный волк","Быстрые руки","Решала","Полный двор"]}
+};
+for(const k in L2){L2[k].howText=L[k].howText.concat([L2[k].howExtra]);Object.assign(L[k],L2[k])}
+
+/* =================== IMPOSTAZIONI =================== */
+const SET_KEY="lafamiglia_settings_v2", SAVE_KEY="lafamiglia_v2";
+let CFG={lang:"it",fps:60,showFps:false,particles:true,bg:true,sound:true,vol:60};
+try{const c=JSON.parse(localStorage.getItem(SET_KEY)||"null");if(c)CFG=Object.assign(CFG,c)}catch(e){}
+function saveCfg(){try{localStorage.setItem(SET_KEY,JSON.stringify(CFG))}catch(e){}}
+function T(k,p){let s=(L[CFG.lang]&&L[CFG.lang][k])??L.it[k]??k;if(typeof s==="string"&&p)for(const x in p)s=s.split("{"+x+"}").join(p[x]);return s}
+const A=k=>(L[CFG.lang]&&L[CFG.lang][k])||L.it[k];
+
+/* =================== DATI =================== */
+const RACKETS=[
+  {cost:15,inc:0.25,heat:1},{cost:120,inc:1.2,heat:1.2},{cost:1300,inc:9,heat:1.6},{cost:14000,inc:50,heat:2},
+  {cost:150000,inc:270,heat:2.4},{cost:1.6e6,inc:1450,heat:2.8},{cost:2.2e7,inc:8000,heat:3.3},{cost:3.5e8,inc:45000,heat:4},
+  {cost:5.5e9,inc:270000,heat:5},{cost:8e10,inc:1.7e6,heat:6}];
+const GROWTH=1.15, SOLD_GROWTH=1.012, SOLD_BASE=20;
+const DISTRICTS=[
+  {req:8,cost:4e3,bonus:.10,heat:.04,pts:"20,150 120,140 130,240 20,240"},
+  {req:35,cost:1.5e5,bonus:.15,heat:.05,pts:"120,140 220,150 230,240 130,240"},
+  {req:110,cost:6e6,bonus:.20,heat:.06,pts:"220,150 330,130 380,120 380,240 230,240"},
+  {req:280,cost:2.5e8,bonus:.25,heat:.08,pts:"110,60 230,50 220,150 120,140"},
+  {req:650,cost:9e9,bonus:.30,heat:.10,pts:"20,30 110,60 120,140 20,150"},
+  {req:1400,cost:4e11,bonus:.40,heat:.12,pts:"230,50 380,20 380,120 330,130 220,150"}];
+
+const UPS=(()=>{const u=[];
+  for(let i=0;i<5;i++)u.push({id:"c"+i,kind:"click",i,val:3,cost:250*Math.pow(45,i),req:s=>s.total>=120*Math.pow(45,i)});
+  RACKETS.forEach((r,i)=>[10,25,50,100].forEach((m,k)=>u.push({id:"r"+i+"_"+m,kind:"racket",r:i,k,val:k<2?2:3,cost:r.cost*Math.pow(10,k+1)*(k+1)*1.5,req:s=>s.owned[i]>=m})));
+  for(let i=0;i<4;i++)u.push({id:"h"+i,kind:"heat",i,val:.7,cost:600*Math.pow(70,i),req:s=>s.total>=350*Math.pow(70,i)});
+  for(let i=0;i<3;i++)u.push({id:"k"+i,kind:"crew",i,val:1.5,cost:2000*Math.pow(200,i),req:s=>s.soldiers>=[10,60,250][i]});
+  return u})();
+
+const MISSIONS=[
+  {t:"clicks",n:25,r:150},{t:"own",i:0,n:10,r:400},{t:"soldiers",n:5,r:800},{t:"own",i:1,n:5,r:2500},
+  {t:"heist",n:1,r:5000},{t:"earn",n:2e4,r:1e4},{t:"lieut",n:1,r:2e4},{t:"territory",n:1,r:3e4},
+  {t:"profit",n:5000,r:4e4},{t:"own",i:2,n:10,r:8e4},{t:"lawyer",n:1,r:5e4},{t:"ips",n:2000,r:3e5},
+  {t:"heist",n:5,r:1e6},{t:"own",i:4,n:5,r:2e6},{t:"territory",n:2,r:5e6},{t:"repel",n:1,r:2e7},
+  {t:"events",n:3,r:3e7},{t:"ips",n:1e5,r:1e8},{t:"territory",n:4,r:1e9},{t:"own",i:8,n:5,r:2e10},
+  {t:"gen",n:2,resp:3},{t:"lieutAll",n:5,r:1e12},{t:"territory",n:6,r:5e12},{t:"ips",n:5e7,r:1e14}];
+
+const ACH=[
+  {t:"clicks",n:100},{t:"clicks",n:2000},{t:"clicks",n:10000},{t:"life",n:1e4},{t:"life",n:1e6},{t:"life",n:1e9},{t:"life",n:1e12},
+  {t:"ips",n:1000},{t:"ips",n:1e6},{t:"soldiers",n:50},{t:"soldiers",n:500},{t:"terr",n:1},{t:"terr",n:6},
+  {t:"raids",n:1},{t:"raids",n:10},{t:"repel",n:1},{t:"repel",n:10},{t:"tips",n:10},{t:"all"},{t:"gen",n:2},{t:"gen",n:5},
+  {t:"mis",n:10},{t:"mis",n:24},{t:"stars"},
+  {t:"heists",n:1},{t:"heists",n:25},{t:"profit",n:1e6},{t:"combo"},{t:"events",n:10},{t:"ltmax"}];
+
+const HEISTS=[
+  {crew:5,prep:500,dur:30,base:.8,rew:3000},{crew:15,prep:2e4,dur:60,base:.7,rew:1.2e5},
+  {crew:50,prep:8e5,dur:120,base:.6,rew:6e6},{crew:150,prep:4e7,dur:180,base:.5,rew:4e8},
+  {crew:400,prep:3e9,dur:300,base:.42,rew:4e10},{crew:1000,prep:3e11,dur:420,base:.35,rew:6e12}];
+const GOODS=[{b:50,v:.10},{b:900,v:.13},{b:15000,v:.16},{b:4e5,v:.19},{b:1.2e7,v:.22},{b:5e8,v:.25}];
+const LT_BASE=[1e4,5e3,5e4,2e4,3e4], LT_MAX=10;
+
+/* =================== STATO =================== */
+function fresh(keep){
+  keep=keep||{};
+  return {cash:0,total:0,clicks:0,owned:RACKETS.map(()=>0),ups:{},heat:0,soldiers:0,terr:{},
+    respect:keep.respect||0,gen:keep.gen||1,lifetime:keep.lifetime||0,totalClicks:keep.totalClicks||0,
+    raids:keep.raids||0,repelled:keep.repelled||0,tips:keep.tips||0,lawyers:keep.lawyers||0,maxStars:keep.maxStars||0,
+    mIdx:keep.mIdx||0,mBase:keep.mBase||null,ach:keep.ach||{},news:keep.news||[],playTime:keep.playTime||0,
+    heistsDone:keep.heistsDone||0,mProfit:keep.mProfit||0,events:keep.events||0,maxCombo:keep.maxCombo||0,
+    heist:null,inv:GOODS.map(()=>0),basis:GOODS.map(()=>0),wh:0,lt:LT_BASE.map(()=>0),ev:null,nextEvent:120,
+    tut:keep.tut!==undefined?keep.tut:0,
+    attack:null,nextAttack:150,last:Date.now(),started:true};
+}
+let S=null, inGame=false, paused=false, qty="1", tab="biz", selD=null;
+
+function hasSave(){try{return !!localStorage.getItem(SAVE_KEY)}catch(e){return false}}
+function save(){if(!S)return;S.last=Date.now();try{localStorage.setItem(SAVE_KEY,JSON.stringify(S))}catch(e){}}
+function loadSave(){try{const d=JSON.parse(localStorage.getItem(SAVE_KEY)||"null");if(!d)return null;const s=Object.assign(fresh(),d);
+  s.owned=RACKETS.map((_,i)=>(d.owned&&d.owned[i])||0);
+  s.inv=GOODS.map((_,i)=>(d.inv&&d.inv[i])||0);s.basis=GOODS.map((_,i)=>(d.basis&&d.basis[i])||0);s.lt=LT_BASE.map((_,i)=>(d.lt&&d.lt[i])||0);
+  if(d.tut===undefined)s.tut=-1;return s}catch(e){return null}}
+
+/* =================== FORMULE =================== */
+const SUF=["","K","M","B","T","Qa","Qi","Sx","Sp","Oc"];
+function fmt(n){if(!isFinite(n))return "∞";if(n<0)return "-"+fmt(-n);if(n<1000)return (n<10&&n%1?n.toFixed(1):Math.floor(n))+"";
+  let i=0;while(n>=1000&&i<SUF.length-1){n/=1000;i++}return (n<100?n.toFixed(2):n.toFixed(1))+SUF[i]}
+const $=id=>document.getElementById(id);
+const upOwned=(f)=>UPS.filter(u=>S.ups[u.id]&&f(u));
+function racketMult(i){return upOwned(u=>u.kind==="racket"&&u.r===i).reduce((m,u)=>m*u.val,1)}
+function crewMult(){return upOwned(u=>u.kind==="crew").reduce((m,u)=>m*u.val,1)}
+function heatMult(){return upOwned(u=>u.kind==="heat").reduce((m,u)=>m*u.val,1)}
+function terrCount(){return Object.keys(S.terr).length}
+function terrBonus(){let b=0;for(const k in S.terr)b+=DISTRICTS[k].bonus;return b}
+function achCount(){return Object.keys(S.ach).length}
+function units(){return S.owned.reduce((a,b)=>a+b,0)}
+function capacity(){return Math.floor((10+avail()*4)*crewMult())}
+function defense(){return Math.floor(avail()*crewMult()*(1+0.15*lt(4)))}
+function efficiency(){const u=units();return u<=0?1:Math.min(1,capacity()/u)}
+function globalMult(){return (1+0.1*S.respect)*(1+0.02*achCount())*(1+terrBonus())*(1+0.1*lt(0))}
+function baseIncome(){let t=0;RACKETS.forEach((r,i)=>t+=S.owned[i]*r.inc*racketMult(i));return t}
+function income(){return baseIncome()*globalMult()*efficiency()}
+function clickVal(){return (1+income()*0.03)*upOwned(u=>u.kind==="click").reduce((m,u)=>m*u.val,1)*(1+0.1*S.respect)}
+function heatRate(){let w=0;RACKETS.forEach((r,i)=>w+=S.owned[i]*r.heat);let t=0;for(const k in S.terr)t+=DISTRICTS[k].heat;
+  return Math.log2(1+w)*0.13*heatMult()*Math.max(.4,1-0.06*lt(1))+t-0.35}
+function stars(){return Math.min(5,Math.ceil(S.heat/20-0.001))}
+function geo(base,g,owned,n){const b=base*Math.pow(g,owned);return b*(Math.pow(g,n)-1)/(g-1)}
+function geoMax(base,g,owned,cash){const b=base*Math.pow(g,owned);return Math.max(0,Math.floor(Math.log(cash*(g-1)/b+1)/Math.log(g)))}
+const rCost=(i,n)=>geo(RACKETS[i].cost,GROWTH,S.owned[i],n);
+const rMax=i=>geoMax(RACKETS[i].cost,GROWTH,S.owned[i],S.cash);
+const sCost=n=>geo(SOLD_BASE,SOLD_GROWTH,S.soldiers,n);
+function lawyerCost(){return Math.max(60,income()*35)*Math.max(.3,1-0.07*lt(1))}
+function respectGain(){return Math.floor(Math.sqrt(S.total/1e6))}
+function conquerChance(d){return Math.max(0.05,Math.min(0.95,defense()/DISTRICTS[d].req*0.7))}
+
+/* =================== AUDIO =================== */
+let AC=null;
+function beep(type){
+  if(!CFG.sound||CFG.vol<=0)return;
+  try{AC=AC||new (window.AudioContext||window.webkitAudioContext)();}catch(e){return}
+  const v=CFG.vol/100*0.15, t0=AC.currentTime;
+  const seq={click:[[880,.04]],buy:[[523,.06],[784,.08]],mission:[[523,.1],[659,.1],[784,.1],[1047,.25]],bad:[[220,.25],[180,.3]],ach:[[784,.08],[1175,.18]],tip:[[1047,.06],[1319,.1]]}[type]||[[440,.05]];
+  let t=t0;seq.forEach(([f,d])=>{const o=AC.createOscillator(),g=AC.createGain();o.type=type==="bad"?"sawtooth":"triangle";o.frequency.value=f;
+    g.gain.setValueAtTime(v,t);g.gain.exponentialRampToValueAtTime(0.0001,t+d);o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.85});
+}
+
+/* =================== GRAFICA: CITTÀ =================== */
+const bg=$("bg"), bctx=bg.getContext("2d"), fx=$("fx"), fctx=fx.getContext("2d");
+let W=0,H=0,DPR=1,city=null;
+function resize(){DPR=Math.min(2,window.devicePixelRatio||1);W=innerWidth;H=innerHeight;
+  [bg,fx].forEach(c=>{c.width=W*DPR;c.height=H*DPR});bctx.setTransform(DPR,0,0,DPR,0,0);fctx.setTransform(DPR,0,0,DPR,0,0);buildCity()}
+function rnd(a,b){return a+Math.random()*(b-a)}
+function buildCity(){
+  const layers=[];
+  [[0.55,.28,28,90,"#2a1838"],[0.66,.42,22,70,"#1a1026"],[0.78,.6,18,60,"#100a18"]].forEach(([base,maxH,minW,maxW,col],li)=>{
+    const b=[];let x=-20;while(x<W+20){const w=rnd(minW,maxW),h=rnd(H*0.06,H*maxH);
+      const win=[];if(li>0)for(let wy=8;wy<h-6;wy+=10)for(let wx=5;wx<w-5;wx+=8)if(Math.random()<.32)win.push([wx,wy,Math.random()<.15]);
+      b.push({x,w,h,win,ant:Math.random()<.15});x+=w+rnd(0,6)}
+    layers.push({base:H*base,col,b,li})});
+  const palms=[];for(let i=0;i<7;i++)palms.push({x:rnd(0,W),h:rnd(70,140),s:rnd(.8,1.2)});
+  const cars=[];for(let i=0;i<14;i++)cars.push({x:rnd(0,W),v:rnd(60,160)*(i%2?1:-1),lane:i%2});
+  city={layers,palms,cars,t:0};
+}
+function drawCity(dt){
+  const c=bctx;city.t+=dt;const t=city.t;
+  const g=c.createLinearGradient(0,0,0,H*.82);
+  g.addColorStop(0,"#120a2a");g.addColorStop(.35,"#3b1450");g.addColorStop(.6,"#b8336a");g.addColorStop(.78,"#ff8a3d");g.addColorStop(.82,"#ffc062");
+  c.fillStyle=g;c.fillRect(0,0,W,H);
+  // stelle
+  c.fillStyle="rgba(255,255,255,.6)";for(let i=0;i<60;i++){const sx=(i*137.5)%W,sy=((i*71.3)%(H*.3));if((i+Math.floor(t*2))%9)c.fillRect(sx,sy,1.2,1.2)}
+  // sole
+  const sx=W*.72,sy=H*.6;const sg=c.createRadialGradient(sx,sy,10,sx,sy,H*.28);sg.addColorStop(0,"rgba(255,220,140,.95)");sg.addColorStop(.25,"rgba(255,140,80,.5)");sg.addColorStop(1,"rgba(255,80,120,0)");
+  c.fillStyle=sg;c.fillRect(0,0,W,H);
+  c.fillStyle="#ffd38a";c.beginPath();c.arc(sx,sy,H*.09,0,Math.PI*2);c.fill();
+  c.fillStyle="#b8336a";for(let i=0;i<5;i++){c.fillRect(sx-H*.1,sy+i*H*.018-H*.005,H*.2,2+i)}
+  // palazzi
+  city.layers.forEach(L=>{
+    const off=(L.li===0?Math.sin(t*.05)*4:0);
+    L.b.forEach(b=>{const y=L.base-b.h;c.fillStyle=L.col;c.fillRect(b.x+off,y,b.w,b.h+H);
+      if(b.ant){c.fillRect(b.x+off+b.w/2-1,y-18,2,18);if(Math.floor(t*1.5)%2){c.fillStyle="#ff3344";c.fillRect(b.x+off+b.w/2-2,y-20,4,4)}c.fillStyle=L.col}
+      if(b.win.length){b.win.forEach(([wx,wy,blink])=>{c.fillStyle=blink&&Math.sin(t*3+wx)>.6?"rgba(120,200,255,.8)":"rgba(255,200,110,.55)";c.fillRect(b.x+off+wx,y+wy,3,4)})}
+    })});
+  // strada
+  const ry=H*.8;c.fillStyle="#07050c";c.fillRect(0,ry,W,H-ry);
+  c.fillStyle="rgba(255,154,60,.25)";c.fillRect(0,ry,W,2);
+  city.cars.forEach(car=>{car.x+=car.v*dt;if(car.x>W+40)car.x=-40;if(car.x<-40)car.x=W+40;
+    const y=ry+12+car.lane*14;const col=car.v>0?"rgba(255,60,60,":"rgba(255,240,200,";
+    const gr=c.createLinearGradient(car.x-(car.v>0?50:-50),0,car.x,0);gr.addColorStop(0,col+"0)");gr.addColorStop(1,col+".9)");
+    c.fillStyle=gr;c.fillRect(Math.min(car.x,car.x-(car.v>0?50:-50)),y,50,2.5)});
+  // palme
+  city.palms.forEach(p=>{const bx=p.x,by=ry+2;c.strokeStyle="#05030a";c.fillStyle="#05030a";c.lineWidth=5*p.s;
+    const sway=Math.sin(t*.8+bx)*4;c.beginPath();c.moveTo(bx,by);c.quadraticCurveTo(bx+8*p.s,by-p.h*.5,bx+sway,by-p.h*p.s);c.stroke();
+    for(let k=0;k<7;k++){const a=-Math.PI/2+(k-3)*0.45+Math.sin(t+k)*.05;c.beginPath();c.moveTo(bx+sway,by-p.h*p.s);
+      c.quadraticCurveTo(bx+sway+Math.cos(a)*30*p.s,by-p.h*p.s+Math.sin(a)*20*p.s-10,bx+sway+Math.cos(a)*48*p.s,by-p.h*p.s+Math.sin(a)*30*p.s+12);c.lineWidth=3*p.s;c.stroke()}});
+  // velo per leggibilità
+  if(inGame){c.fillStyle="rgba(8,6,14,.45)";c.fillRect(0,0,W,H)}
+  // lampeggianti polizia
+  if(inGame&&S&&stars()>=3){const a=.08+.06*Math.sin(t*10);c.fillStyle=Math.floor(t*4)%2?`rgba(255,40,60,${a})`:`rgba(40,120,255,${a})`;c.fillRect(0,0,W,H)}
+}
+
+/* =================== PARTICELLE =================== */
+const parts=[];
+function burst(x,y,n,col){if(!CFG.particles)return;for(let i=0;i<n;i++)parts.push({x,y,vx:rnd(-160,160),vy:rnd(-320,-120),r:rnd(-3,3),a:rnd(0,6),life:rnd(.8,1.4),t:0,col:col||(Math.random()<.8?"#6fd46f":"#ffd04a")})}
+function drawParts(dt){fctx.clearRect(0,0,W,H);for(let i=parts.length-1;i>=0;i--){const p=parts[i];p.t+=dt;if(p.t>p.life){parts.splice(i,1);continue}
+  p.vy+=600*dt;p.x+=p.vx*dt;p.y+=p.vy*dt;p.a+=p.r*dt;fctx.save();fctx.globalAlpha=1-p.t/p.life;fctx.translate(p.x,p.y);fctx.rotate(p.a);
+  fctx.fillStyle=p.col;fctx.fillRect(-7,-4,14,8);fctx.fillStyle="rgba(0,0,0,.3)";fctx.fillRect(-2,-2,4,4);fctx.restore()}}
+
+/* =================== UI: TESTI =================== */
+function applyTexts(){
+  document.documentElement.lang=CFG.lang;
+  document.querySelectorAll("[data-t]").forEach(el=>el.textContent=T(el.dataset.t));
+  $("howText").innerHTML=A("howText").map(p=>`<p>${p}</p>`).join("");
+  $("mContinue").hidden=!hasSave();
+  buildLangs();buildSettings();
+  if(S&&inGame){buildRackets();buildMap();renderNews();renderAll(true);renderEvent(true);if(S.tut>=0)tutRender()}
+  $("tutReplayBtn").hidden=!inGame;
+}
+const LANGS=[["it","IT"],["en","EN"],["es","ES"],["ru","RU"]];
+function buildLangs(){$("menuLangs").innerHTML=LANGS.map(([k,l])=>`<button data-l="${k}" class="${CFG.lang===k?"on":""}">${l}</button>`).join("");
+  $("menuLangs").querySelectorAll("button").forEach(b=>b.onclick=()=>{CFG.lang=b.dataset.l;saveCfg();applyTexts()})}
+function seg(id,opts,cur,cb){$(id).innerHTML=opts.map(([v,l])=>`<button data-v="${v}" class="${String(cur)===String(v)?"on":""}">${l}</button>`).join("");
+  $(id).querySelectorAll("button").forEach(b=>b.onclick=()=>{cb(b.dataset.v);saveCfg();buildSettings();applyCfg()})}
+function buildSettings(){
+  seg("setLang",LANGS,CFG.lang,v=>{CFG.lang=v;applyTexts()});
+  seg("setFps",[[30,"30"],[60,"60"],[120,"120"],[0,T("unlimited")]],CFG.fps,v=>CFG.fps=+v);
+  const oo=[["1",T("on")],["0",T("off")]];
+  seg("setShowFps",oo,CFG.showFps?1:0,v=>CFG.showFps=v==="1");
+  seg("setBg",oo,CFG.bg?1:0,v=>CFG.bg=v==="1");
+  seg("setPart",oo,CFG.particles?1:0,v=>CFG.particles=v==="1");
+  seg("setSound",oo,CFG.sound?1:0,v=>CFG.sound=v==="1");
+  $("vol").value=CFG.vol;
+}
+$("vol").oninput=e=>{CFG.vol=+e.target.value;saveCfg()};
+$("vol").onchange=()=>beep("buy");
+function applyCfg(){$("fps").hidden=!CFG.showFps}
+
+/* =================== OVERLAY / NAVIGAZIONE =================== */
+function show(id,v){
+  if(id==="ovSettings"&&v){$("tutReplayBtn").hidden=!inGame;$("ovSettings").querySelector(".modal").appendChild($("setBody"));if(tab==="set")setTab("biz")}
+  $(id).hidden=!v}
+let settingsFrom=null;
+$("mSettings").onclick=()=>{show("ovSettings",1)};
+$("mHow").onclick=()=>show("ovHow",1);
+$("closeHow").onclick=()=>show("ovHow",0);
+$("closeSettings").onclick=()=>{show("resetConfirm",0);if(tab==="set"&&$("ovSettings").hidden)setTab("biz");else show("ovSettings",0)};
+$("saveNow").onclick=()=>{save();toast(T("saved"),"","good")};
+$("resetBtn").onclick=()=>show("resetConfirm",1);
+$("resetNo").onclick=()=>show("resetConfirm",0);
+$("resetYes").onclick=()=>{try{localStorage.removeItem(SAVE_KEY)}catch(e){}S=null;show("resetConfirm",0);show("ovSettings",0);show("ovPause",0);toMenu()};
+$("mContinue").onclick=()=>{const s=loadSave();if(s)startGame(s,true)};
+$("mNew").onclick=()=>{if(hasSave())show("ovNew",1);else startGame(null)};
+$("newYes").onclick=()=>{show("ovNew",0);startGame(null)};
+$("newNo").onclick=()=>show("ovNew",0);
+$("pauseBtn").onclick=()=>setPause(true);
+$("gearBtn").onclick=()=>{setTab("set");$("tabs").scrollIntoView({behavior:"smooth",block:"start"})};
+$("pResume").onclick=()=>setPause(false);
+$("pSettings").onclick=()=>show("ovSettings",1);
+$("pHow").onclick=()=>show("ovHow",1);
+$("pMenu").onclick=()=>{save();setPause(false);toMenu()};
+addEventListener("keydown",e=>{if(e.key==="Escape"){
+  if(!$("ovSettings").hidden){show("ovSettings",0);return}
+  if(!$("ovHow").hidden){show("ovHow",0);return}
+  if(inGame)setPause(!paused)}});
+function setPause(p){paused=p;show("ovPause",p)}
+function toMenu(){inGame=false;$("game").hidden=true;$("menu").hidden=false;removeTip();tutHide();renderEvent();applyTexts()}
+
+/* =================== AVVIO PARTITA =================== */
+function startGame(s,resumed){
+  S=s||fresh();
+  if(!S.mBase)startMission();
+  if(resumed){const away=Math.min(8*3600,(Date.now()-S.last)/1000);const off=income()*away*0.5;
+    if(off>1&&away>30){earn(off);news(T("offline",{v:fmt(off)}),"good")}}
+  if(!S.news.length)news(T("intro"));
+  inGame=true;paused=false;$("menu").hidden=true;$("game").hidden=false;
+  buildRackets();buildMap();buildStars();renderNews();setTab("biz");save();
+  renderEvent();if(S.tut>=0)setTimeout(tutRender,250);
+}
+
+/* =================== NOTIFICHE =================== */
+function news(t,cls){S.news.unshift({t,cls:cls||""});S.news=S.news.slice(0,40);if(tab==="log")renderNews()}
+function renderNews(){$("news").innerHTML=S.news.map(n=>`<div class="${n.cls}">${n.t}</div>`).join("")}
+function toast(title,sub,cls){const d=document.createElement("div");d.className="toast "+(cls||"");d.innerHTML=`<b>${title}</b>${sub?`<span>${sub}</span>`:""}`;
+  $("toasts").appendChild(d);setTimeout(()=>d.remove(),3400)}
+function banner(big,small,bad){const old=$("banner");if(old)old.remove();const d=document.createElement("div");d.id="banner";if(bad)d.className="bad";
+  d.innerHTML=`<div class="big">${big}</div><div class="small">${small||""}</div>`;document.body.appendChild(d);setTimeout(()=>d.remove(),3000)}
+function earn(v){S.cash+=v;S.total+=v;S.lifetime+=v}
+
+/* =================== AFFARI =================== */
+function rName(i){return A("racketNames")[i]}
+function buildRackets(){
+  $("rackets").innerHTML=RACKETS.map((r,i)=>`<div class="racket" id="rk${i}">
+    <div class="n" id="rn${i}">0</div>
+    <div style="min-width:0"><div class="name">${rName(i)}</div><div class="meta" id="rm${i}"></div><div class="pb"><i id="rp${i}"></i></div></div>
+    <button class="btn" id="rb${i}"></button></div>`).join("");
+  RACKETS.forEach((_,i)=>$("rb"+i).onclick=e=>buyRacket(i,e));
+}
+function buyRacket(i,e){
+  const n=qty==="max"?rMax(i):+qty;if(n<1)return;const c=rCost(i,n);if(S.cash<c)return;
+  S.cash-=c;if(S.owned[i]===0)news(T("newBiz",{r:rName(i)}),"good");S.owned[i]+=n;beep("buy");
+  if(e&&e.clientX)burst(e.clientX,e.clientY,6,"#ff9a3c");renderAll(true);
+}
+function upName(u){
+  if(u.kind==="click")return A("clickNames")[u.i];
+  if(u.kind==="racket")return rName(u.r)+": "+A("tierNames")[u.k];
+  if(u.kind==="heat")return A("heatNames")[u.i];
+  return A("crewNames")[u.i];
+}
+function upDesc(u){
+  if(u.kind==="click")return T("up_click",{v:u.val});
+  if(u.kind==="racket")return T("up_racket",{r:rName(u.r),v:u.val});
+  if(u.kind==="heat")return T("up_heat");
+  return T("up_crew");
+}
+let upsKey="";
+function renderUps(force){
+  const list=UPS.filter(u=>!S.ups[u.id]&&u.req(S)).sort((a,b)=>a.cost-b.cost).slice(0,9);
+  const key=CFG.lang+list.map(u=>u.id+(S.cash>=u.cost?1:0)).join();
+  if(!force&&key===upsKey)return;upsKey=key;
+  $("ups").innerHTML=list.length?list.map(u=>`<button class="btn up" data-u="${u.id}" ${S.cash<u.cost?"disabled":""}><b>${upName(u)}</b><span>${upDesc(u)}</span><em>$${fmt(u.cost)}</em></button>`).join("")
+    :`<p class="empty">${T("noUpgrades")}</p>`;
+  $("ups").querySelectorAll("button").forEach(b=>b.onclick=()=>{const u=UPS.find(x=>x.id===b.dataset.u);if(!u||S.cash<u.cost)return;
+    S.cash-=u.cost;S.ups[u.id]=1;news(T("favor",{u:upName(u)}),"good");beep("buy");renderAll(true)});
+}
+function hire(n){if(n<1)return;const c=sCost(n);if(S.cash<c)return;S.cash-=c;S.soldiers+=n;beep("buy");renderAll()}
+$("hire1").onclick=()=>hire(1);
+$("hire10").onclick=()=>hire(10);
+$("lawyer").onclick=()=>{const c=lawyerCost();if(S.cash<c)return;S.cash-=c;S.heat=Math.max(0,S.heat-40);S.lawyers++;news(T("lawyerNews"),"good");beep("buy");renderAll()};
+$("qty").querySelectorAll("button").forEach(b=>b.onclick=()=>{qty=b.dataset.q;$("qty").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderAll()});
+$("collect").addEventListener("click",e=>{
+  if(!S)return;const nowc=performance.now();combo=nowc-lastClick<650?Math.min(50,combo+1):0;lastClick=nowc;S.maxCombo=Math.max(S.maxCombo||0,combo);
+  const v=clickVal()*comboMult();earn(v);S.clicks++;S.totalClicks++;beep("click");
+  const r=$("collect").getBoundingClientRect();const f=document.createElement("div");f.className="floater";f.textContent="+$"+fmt(v);
+  f.style.left=((e.clientX||r.left+r.width/2)-r.left-24)+"px";f.style.top=((e.clientY||r.top+r.height/2)-r.top-24)+"px";
+  $("collect").appendChild(f);setTimeout(()=>f.remove(),900);
+  burst(e.clientX||r.left+r.width/2,e.clientY||r.top+r.height/2,5);renderAll();
+});
+$("retire").onclick=()=>{show("retireConfirm",1);$("retire").hidden=true};
+$("retireNo").onclick=()=>{show("retireConfirm",0);$("retire").hidden=false};
+$("retireYes").onclick=()=>{const g=respectGain();if(g<1)return;
+  const keep={respect:S.respect+g,gen:S.gen+1,lifetime:S.lifetime,totalClicks:S.totalClicks,raids:S.raids,repelled:S.repelled,tips:S.tips,lawyers:S.lawyers,
+    maxStars:S.maxStars,heistsDone:S.heistsDone,mProfit:S.mProfit,events:S.events,maxCombo:S.maxCombo,tut:-1,mIdx:S.mIdx,mBase:S.mBase,ach:S.ach,news:S.news,playTime:S.playTime};
+  S=fresh(keep);news(T("retireNews",{g:S.gen,r:S.respect}),"good");show("retireConfirm",0);$("retire").hidden=false;
+  banner(T("respect")+" +"+g,T("stGen")+" "+S.gen);beep("mission");selD=null;buildMap();renderAll(true);save()};
+
+/* =================== TERRITORI =================== */
+function dName(i){return A("districts")[i]}
+function centroid(pts){const p=pts.split(" ").map(s=>s.split(",").map(Number));return [p.reduce((a,b)=>a+b[0],0)/p.length,p.reduce((a,b)=>a+b[1],0)/p.length]}
+function buildMap(){
+  let h=`<defs><linearGradient id="mine" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ff3d7f"/><stop offset="1" stop-color="#ff9a3c"/></linearGradient>
+    <pattern id="wv" width="12" height="6" patternUnits="userSpaceOnUse"><path d="M0 3 Q3 0 6 3 T12 3" fill="none" stroke="rgba(74,179,255,.18)"/></pattern></defs>
+    <rect width="400" height="260" fill="url(#wv)"/>`;
+  DISTRICTS.forEach((d,i)=>{h+=`<polygon class="d" id="dp${i}" data-i="${i}" points="${d.pts}"/>`});
+  DISTRICTS.forEach((d,i)=>{const [x,y]=centroid(d.pts);h+=`<text x="${x}" y="${y}" text-anchor="middle">${dName(i)}</text>`});
+  $("map").innerHTML=h;
+  $("map").querySelectorAll(".d").forEach(p=>p.onclick=()=>{selD=+p.dataset.i;renderMap(true)});
+  renderMap(true);
+}
+let dinfoKey="";
+function renderMap(force){
+  DISTRICTS.forEach((d,i)=>{const p=$("dp"+i);if(!p)return;p.setAttribute("class","d "+(S.terr[i]?"mine":"free")+(selD===i?" sel":"")+(S.attack&&S.attack.d===i?" attacked":""))});
+  const al=$("attackAlert");
+  if(S.attack){al.hidden=false;al.textContent=T("attackAlert",{g:A("gangs")[S.attack.g],d:dName(S.attack.d),p:fmt(S.attack.p),s:Math.ceil(S.attack.t)})}else al.hidden=true;
+  if(selD===null){if(force||dinfoKey!=="none"){$("dinfo").innerHTML=`<p class="empty">${T("selectDistrict")}</p>`;dinfoKey="none"}return}
+  const d=DISTRICTS[selD],mine=!!S.terr[selD],ch=conquerChance(selD);
+  const key=[selD,mine,Math.round(ch*100),S.cash>=d.cost,CFG.lang,defense()].join();
+  if(!force&&key===dinfoKey)return;dinfoKey=key;
+  $("dinfo").innerHTML=`<h3>${dName(selD)}</h3><dl class="dl">
+    <dt>${T("required")}</dt><dd>${fmt(d.req)}</dd><dt>${T("defense")}</dt><dd>${fmt(defense())}</dd>
+    <dt>${T("cost")}</dt><dd>$${fmt(d.cost)}</dd><dt>${T("chance")}</dt><dd>${mine?"—":Math.round(ch*100)+"%"}</dd>
+    <dt>${T("bonus")}</dt><dd>+${Math.round(d.bonus*100)}%</dd><dt>${T("heatAdd")}</dt><dd>+${d.heat.toFixed(2)}/s</dd></dl>
+    ${mine?`<p class="warn" style="color:var(--cash)">${T("owned")}</p>`:`<button class="btn hot wide" id="conq" style="margin-top:12px" ${S.cash<d.cost?"disabled":""}>${T("conquer")}</button>`}`;
+  const b=$("conq");if(b)b.onclick=()=>conquer(selD);
+}
+function conquer(i){const d=DISTRICTS[i];if(S.cash<d.cost||S.terr[i])return;S.cash-=d.cost;
+  if(Math.random()<conquerChance(i)){S.terr[i]=1;news(T("conquered",{d:dName(i)}),"good");banner(dName(i),T("conquered",{d:dName(i)}));beep("mission");
+    if(S.nextAttack<60)S.nextAttack=90}
+  else{const lost=Math.ceil(S.soldiers*0.15);S.soldiers-=lost;news(T("conquerFail",{d:dName(i),n:lost}),"hot");toast(T("conquerFail",{d:dName(i),n:lost}),"","bad");beep("bad");shake("heatcard")}
+  renderAll(true)}
+function updateAttacks(dt){
+  if(terrCount()===0){S.attack=null;return}
+  if(S.attack){S.attack.t-=dt;if(S.attack.t<=0)resolveAttack();return}
+  S.nextAttack-=dt;
+  if(S.nextAttack<=0){const own=Object.keys(S.terr).map(Number);const d=own[Math.floor(Math.random()*own.length)];
+    const p=Math.ceil(DISTRICTS[d].req*(0.9+Math.random()*0.5)*(1+0.12*S.repelled));
+    S.attack={d,g:Math.floor(Math.random()*4),p,t:15};S.nextAttack=rnd(120,200);beep("bad");
+    toast(T("attackAlert",{g:A("gangs")[S.attack.g],d:dName(d),p:fmt(p),s:15}),"","bad")}
+}
+function resolveAttack(){const a=S.attack;S.attack=null;const gang=A("gangs")[a.g];
+  if(defense()>=a.p){S.repelled++;const v=Math.max(500,income()*45);earn(v);news(T("attackWon",{g:gang,d:dName(a.d),v:fmt(v)}),"good");toast(T("attackWon",{g:gang,d:dName(a.d),v:fmt(v)}),"","good");beep("ach")}
+  else{delete S.terr[a.d];const lost=Math.ceil(S.soldiers*0.2);S.soldiers-=lost;news(T("attackLost",{g:gang,d:dName(a.d),n:lost}),"hot");banner(dName(a.d),T("attackLost",{g:gang,d:dName(a.d),n:lost}),true);beep("bad")}
+  renderAll(true)}
+
+/* =================== MISSIONI =================== */
+function startMission(){S.mBase={clicks:S.totalClicks,life:S.lifetime,lawyers:S.lawyers,repel:S.repelled,heists:S.heistsDone,profit:S.mProfit,events:S.events}}
+function mProg(m){
+  const b=S.mBase||{clicks:0,life:0,lawyers:0,repel:0};
+  switch(m.t){case"clicks":return S.totalClicks-b.clicks;case"own":return S.owned[m.i];case"soldiers":return S.soldiers;case"earn":return S.lifetime-b.life;
+    case"territory":return terrCount();case"lawyer":return S.lawyers-b.lawyers;case"ips":return income();case"repel":return S.repelled-b.repel;case"gen":return S.gen;
+    case"heist":return S.heistsDone-(b.heists||0);case"lieut":return S.lt.some(x=>x>0)?1:0;case"profit":return S.mProfit-(b.profit||0);case"events":return S.events-(b.events||0);case"lieutAll":return Math.min(...S.lt)}return 0}
+function mText(m){const n=fmt(m.n);switch(m.t){case"own":return T("m_own",{n:m.n,r:rName(m.i)});case"clicks":return T("m_clicks",{n});case"soldiers":return T("m_soldiers",{n});
+  case"earn":return T("m_earn",{n});case"territory":return T("m_territory",{n:m.n});case"lawyer":return T("m_lawyer");case"ips":return T("m_ips",{n});case"repel":return T("m_repel");case"gen":return T("m_gen");
+  case"heist":return T("m_heist",{n:m.n});case"lieut":return T("m_lieut");case"profit":return T("m_profit",{n});case"events":return T("m_events",{n:m.n});case"lieutAll":return T("m_lieutAll",{n:m.n})}}
+function mReward(m){return m.resp?T("m_rewardRespect",{n:m.resp}):"$"+fmt(m.r)}
+function checkMission(){
+  if(S.mIdx>=MISSIONS.length)return;const m=MISSIONS[S.mIdx];
+  if(mProg(m)>=m.n){if(m.resp)S.respect+=m.resp;else earn(m.r);
+    banner(T("missionPassed"),A("missionTitles")[S.mIdx]+" · "+mReward(m));beep("mission");burst(W/2,H*.38,40);
+    news(T("missionPassed")+": "+A("missionTitles")[S.mIdx]+" ("+mReward(m)+")","good");
+    S.mIdx++;startMission();renderMissions(true)}
+}
+let curMKey="";
+function renderCurMission(){
+  if(S.mIdx>=MISSIONS.length){const k="done"+CFG.lang;if(curMKey!==k){curMKey=k;$("curMission").innerHTML=`<p class="label">${T("tabMissions")}</p><p style="margin:0">${T("allMissions")}</p>`}return}
+  const m=MISSIONS[S.mIdx],p=Math.min(1,mProg(m)/m.n);const k=S.mIdx+CFG.lang;
+  if(curMKey!==k){curMKey=k;$("curMission").innerHTML=`<p class="label">${T("missionN",{n:S.mIdx+1})}</p><h3>${A("missionTitles")[S.mIdx]}</h3>
+    <div class="obj">${mText(m)}</div><div class="bar mis"><i id="mfill"></i></div><div class="row"><span id="mprog"></span><span>${T("reward")}: <b>${mReward(m)}</b></span></div>`}
+  $("mfill").style.width=(p*100)+"%";
+  $("mprog").textContent=m.t==="lawyer"||m.t==="repel"||m.t==="gen"||m.t==="lieut"?Math.round(p*100)+"%":fmt(Math.min(mProg(m),m.n))+" / "+fmt(m.n);
+}
+function renderMissions(){
+  if(tab!=="mis")return;
+  $("mlist").innerHTML=MISSIONS.map((m,i)=>{const st=i<S.mIdx?"done":i===S.mIdx?"cur":"";const vis=i<=S.mIdx+1;
+    return `<div class="mi ${st}"><div class="ix">${i<S.mIdx?"✓":i+1}</div><div style="min-width:0"><div class="t">${vis?A("missionTitles")[i]:"???"}</div><div class="s">${vis?mText(m):"—"}</div></div><div class="r">${vis?mReward(m):""}</div></div>`}).join("");
+}
+
+/* =================== TRAGUARDI =================== */
+function achVal(a){switch(a.t){case"clicks":return S.totalClicks;case"life":return S.lifetime;case"ips":return income();case"soldiers":return S.soldiers;case"terr":return terrCount();
+  case"raids":return S.raids;case"repel":return S.repelled;case"tips":return S.tips;case"all":return S.owned.every(x=>x>0)?1:0;case"gen":return S.gen;case"mis":return S.mIdx;case"stars":return S.maxStars>=5?1:0;
+  case"heists":return S.heistsDone;case"profit":return S.mProfit;case"combo":return S.maxCombo>=50?1:0;case"events":return S.events;case"ltmax":return S.lt.every(x=>x>=LT_MAX)?1:0}}
+function achDesc(a){const n=fmt(a.n||0);const k={clicks:"a_clicks",life:"a_life",ips:"a_ips",soldiers:"a_soldiers",terr:"a_terr",raids:"a_raids",repel:"a_repel",tips:"a_tips",all:"a_all",gen:"a_gen",mis:"a_mis",stars:"a_stars",heists:"a_heists",profit:"a_profit",combo:"a_combo",events:"a_events",ltmax:"a_ltmax"}[a.t];
+  return T(k,{n:a.t==="terr"||a.t==="gen"||a.t==="mis"||a.t==="raids"||a.t==="repel"||a.t==="tips"||a.t==="heists"||a.t==="events"?a.n:n})}
+function checkAch(){ACH.forEach((a,i)=>{if(S.ach[i])return;const need=a.n||1;if(achVal(a)>=need){S.ach[i]=1;toast(T("achUnlocked"),A("achNames")[i],"");beep("ach");news(T("achUnlocked")+": "+A("achNames")[i],"good");if(tab==="ach")renderAch()}})}
+function renderAch(){
+  $("achcount").textContent=T("achCount",{a:achCount(),b:ACH.length});$("achbonus").textContent=T("achBonus",{p:achCount()*2});
+  $("alist").innerHTML=ACH.map((a,i)=>`<div class="ach ${S.ach[i]?"got":""}"><div class="ic">${S.ach[i]?"★":i+1}</div><div style="min-width:0"><div class="t">${A("achNames")[i]}</div><div class="s">${achDesc(a)}</div></div></div>`).join("");
+}
+
+
+/* =================== COMBO =================== */
+let combo=0,lastClick=0;
+function comboMult(){return 1+combo/25}
+
+/* =================== LUOGOTENENTI =================== */
+function lt(i){return (S&&S.lt&&S.lt[i])||0}
+function ltCost(i){return LT_BASE[i]*Math.pow(6,lt(i))}
+function ltBuy(i){if(lt(i)>=LT_MAX||S.cash<ltCost(i))return;S.cash-=ltCost(i);S.lt[i]=lt(i)+1;
+  news(T("ltNews",{l:A("lieutNames")[i],n:S.lt[i]}),"good");beep("buy");renderAll(true)}
+let ltKey="";
+function renderLt(force){
+  const key=CFG.lang+S.lt.join()+"|"+S.lt.map((_,i)=>S.cash>=ltCost(i)?1:0).join();
+  if(!force&&key===ltKey)return;ltKey=key;
+  $("ltList").innerHTML=LT_BASE.map((_,i)=>{const l=lt(i),mx=l>=LT_MAX;
+    return `<div class="item"><div style="min-width:0"><div class="t">${A("lieutNames")[i]}</div>
+      <div class="meta"><span>${A("lieutDesc")[i]}</span><span><b>${T("level",{n:l,m:LT_MAX})}</b></span></div>
+      <div class="lv">${Array.from({length:LT_MAX},(_,k)=>`<i class="${k<l?"on":""}"></i>`).join("")}</div></div>
+      <div class="btns"><button class="btn ${l===0?"hot":""}" data-l="${i}" ${mx||S.cash<ltCost(i)?"disabled":""}>${mx?T("maxed"):T(l===0?"hireLt":"upLt",{v:fmt(ltCost(i))})}</button></div></div>`}).join("");
+  $("ltList").querySelectorAll("[data-l]").forEach(b=>b.onclick=()=>ltBuy(+b.dataset.l));
+}
+
+/* =================== COLPI =================== */
+function busy(){return S.heist?S.heist.crew:0}
+function avail(){return Math.max(0,S.soldiers-busy())}
+function hName(i){return A("heistNames")[i]}
+function hDur(i){return Math.round(HEISTS[i].dur*Math.max(.4,1-0.06*lt(3)))}
+function hChance(i){return Math.min(.95,HEISTS[i].base+0.04*lt(2))}
+function hReward(i){return HEISTS[i].rew+income()*hDur(i)*0.6}
+function hUnl(i){return i===0||S.lifetime>=HEISTS[i].prep*3}
+function startHeist(i){const h=HEISTS[i];if(S.heist||!hUnl(i)||avail()<h.crew||S.cash<h.prep)return;
+  S.cash-=h.prep;const d=hDur(i);S.heist={i,t:d,T:d,crew:h.crew,rew:hReward(i)};beep("buy");
+  toast(T("heistRunning",{h:hName(i)}),T("heistRem",{s:d,n:h.crew}),"");renderAll(true)}
+function updateHeist(dt){if(!S.heist)return;S.heist.t-=dt;if(S.heist.t>0)return;
+  const h=S.heist;S.heist=null;
+  if(Math.random()<hChance(h.i)){earn(h.rew);S.heistsDone++;S.heat+=15;
+    banner(T("heistOkBig"),hName(h.i)+" · +$"+fmt(h.rew));news(T("heistOk",{h:hName(h.i),v:fmt(h.rew)}),"good");beep("mission");burst(W/2,H*.4,40)}
+  else{const lost=Math.ceil(h.crew*0.3);S.soldiers=Math.max(0,S.soldiers-lost);S.heat+=30;
+    banner(T("heistFailBig"),T("heistFail",{h:hName(h.i),n:lost}),true);news(T("heistFail",{h:hName(h.i),n:lost}),"hot");beep("bad")}
+  renderAll(true)}
+let heistKey="";
+function renderHeists(force){
+  const a=$("heistActive");
+  if(S.heist){const h=S.heist;a.hidden=false;
+    a.innerHTML=`<div style="min-width:0"><div class="t">${T("heistRunning",{h:hName(h.i)})}</div><div class="meta">${T("heistRem",{s:Math.ceil(h.t),n:fmt(h.crew)})}</div>
+      <div class="bar mis" style="margin-top:8px"><i style="width:${((1-h.t/h.T)*100).toFixed(1)}%"></i></div></div>`}
+  else a.hidden=true;
+  const rows=HEISTS.map((h,i)=>{const u=hUnl(i);return [u,!S.heist&&u&&avail()>=h.crew&&S.cash>=h.prep,fmt(hReward(i))]});
+  const key=CFG.lang+JSON.stringify(rows)+lt(2)+lt(3);
+  if(!force&&key===heistKey)return;heistKey=key;
+  $("heistList").innerHTML=HEISTS.map((h,i)=>{const [u,can,rw]=rows[i];
+    return `<div class="item ${u?"":"locked"}"><div style="min-width:0"><div class="t">${hName(i)}</div>
+      <div class="meta">${u?`<span>${T("crewReq")}: <b>${fmt(h.crew)}</b></span><span>${T("prepCost")}: <b>$${fmt(h.prep)}</b></span><span>${T("duration")}: <b>${hDur(i)}s</b></span><span>${T("successCh")}: <b>${Math.round(hChance(i)*100)}%</b></span><span>${T("payout")}: <b class="up-c">~$${rw}</b></span>`
+        :`<span>${T("heistLocked",{v:fmt(h.prep*3)})}</span>`}</div></div>
+      <div class="btns"><button class="btn hot" data-h="${i}" ${can?"":"disabled"}>${T("startHeist")}</button></div></div>`}).join("");
+  $("heistList").querySelectorAll("[data-h]").forEach(b=>b.onclick=()=>startHeist(+b.dataset.h));
+}
+
+/* =================== MERCATO NERO =================== */
+let MKT=GOODS.map(g=>({p:g.b,h:Array(40).fill(g.b)})), mktN=0, qtyM="1";
+function whCap(){return 25*Math.pow(2,S.wh)}
+function whCost(){return 2000*Math.pow(8,S.wh)}
+function invUsed(){return S.inv.reduce((a,b)=>a+b,0)}
+function gUnl(i){return i===0||S.lifetime>=GOODS[i].b*20}
+function tickMarket(){mktN++;MKT.forEach((m,i)=>{const g=GOODS[i];let lp=Math.log(m.p);
+  lp+=0.07*(Math.log(g.b)-lp)+g.v*0.45*(Math.random()+Math.random()+Math.random()-1.5);
+  if(Math.random()<0.03)lp+=(Math.random()<.5?-1:1)*g.v*2.5;
+  m.p=Math.exp(lp);m.h.push(m.p);m.h.shift()})}
+function mQty(){return qtyM==="max"?Infinity:+qtyM}
+function mktBuy(i){if(!gUnl(i))return;const n=Math.min(mQty(),whCap()-invUsed(),Math.floor(S.cash/MKT[i].p));if(n<1)return;
+  const c=n*MKT[i].p;S.cash-=c;S.basis[i]=(S.basis[i]*S.inv[i]+c)/(S.inv[i]+n);S.inv[i]+=n;beep("buy");renderAll(true)}
+function mktSell(i){const n=Math.min(mQty(),S.inv[i]);if(n<1)return;const v=n*MKT[i].p,pr=v-n*S.basis[i];
+  S.cash+=v;if(pr>0){S.total+=pr;S.lifetime+=pr}S.mProfit+=pr;S.inv[i]-=n;if(S.inv[i]===0)S.basis[i]=0;beep(pr>=0?"tip":"bad");renderAll(true)}
+$("mqty").querySelectorAll("button").forEach(b=>b.onclick=()=>{qtyM=b.dataset.q;$("mqty").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));renderAll(true)});
+$("whup").onclick=()=>{if(S.cash<whCost())return;S.cash-=whCost();S.wh++;beep("buy");renderAll(true)};
+let mktKey="";
+function renderMarket(force){
+  $("whinfo").textContent=T("whCap",{a:fmt(invUsed()),b:fmt(whCap())});
+  $("whup").textContent=T("whUp",{v:fmt(whCost())});$("whup").disabled=S.cash<whCost();
+  const pf=$("mprofit");pf.textContent=(S.mProfit<0?"-$":"+$")+fmt(Math.abs(S.mProfit));pf.className=S.mProfit<0?"dn-c":"up-c";
+  const free=whCap()-invUsed();
+  const rows=GOODS.map((g,i)=>[gUnl(i),gUnl(i)&&free>0&&S.cash>=MKT[i].p,S.inv[i]>0]);
+  const key=CFG.lang+JSON.stringify(rows)+mktN+qtyM;
+  if(!force&&key===mktKey)return;mktKey=key;
+  $("mktList").innerHTML=GOODS.map((g,i)=>{const m=MKT[i],u=rows[i][0],prev=m.h[m.h.length-2],ch=(m.p/prev-1)*100;
+    const mn=Math.min(...m.h),mx=Math.max(...m.h);
+    const pts=m.h.map((v,k)=>`${(k/(m.h.length-1)*110).toFixed(1)},${(31-(v-mn)/((mx-mn)||1)*29).toFixed(1)}`).join(" ");
+    const pl=S.inv[i]?(m.p-S.basis[i])*S.inv[i]:0;
+    return `<div class="item mkt ${u?"":"locked"}"><div style="min-width:0"><div class="t">${A("goods")[i]}</div>
+      <div class="meta"><span>${T("price")}: <b>$${fmt(m.p)}</b> <span class="${ch>=0?"up-c":"dn-c"}">${ch>=0?"▲":"▼"}${Math.abs(ch).toFixed(1)}%</span></span>
+      ${u?`<span>${T("held")}: <b>${fmt(S.inv[i])}</b></span>${S.inv[i]?`<span>${T("avg")}: <b>$${fmt(S.basis[i])}</b></span><span class="${pl>=0?"up-c":"dn-c"}">${pl>=0?"+":"-"}$${fmt(Math.abs(pl))}</span>`:""}`
+        :`<span>${T("lockedGood",{v:fmt(g.b*20)})}</span>`}</div></div>
+      <svg class="spark" viewBox="0 0 110 32" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="${ch>=0?"#7be07b":"#ff4a4a"}" stroke-width="1.6"/></svg>
+      <div class="btns"><button class="btn" data-b="${i}" ${rows[i][1]?"":"disabled"}>${T("buy")}</button><button class="btn" data-s="${i}" ${rows[i][2]?"":"disabled"}>${T("sell")}</button></div></div>`}).join("");
+  $("mktList").querySelectorAll("[data-b]").forEach(b=>b.onclick=()=>mktBuy(+b.dataset.b));
+  $("mktList").querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>mktSell(+b.dataset.s));
+}
+
+/* =================== EVENTI A SCELTA =================== */
+const EV_COST=[60,90,45,0,120,60];
+function spawnEvent(){if(!S||S.ev||!inGame)return;const pool=[0,2,3,4,5];if(terrCount()>0)pool.push(1);
+  const k=pool[Math.floor(Math.random()*pool.length)];S.ev={k,t:45,c:Math.max(100,income()*EV_COST[k])};beep("tip");renderEvent(true)}
+function updateEvents(dt){
+  if(S.ev){S.ev.t-=dt;if(S.ev.t<=0)resolveEvent(false);else renderEvent();return}
+  S.nextEvent-=dt;if(S.nextEvent<=0){S.nextEvent=rnd(150,240);if(income()>0&&S.tut<0)spawnEvent()}}
+let evKey="";
+function renderEvent(force){
+  let el=$("evcard");
+  if(!S||!S.ev||!inGame){if(el)el.remove();evKey="";return}
+  if(!el){el=document.createElement("div");el.id="evcard";document.body.appendChild(el);force=true}
+  const e=S.ev,k=e.k,pay=EV_COST[k]>0,can=!pay||S.cash>=e.c,key=k+CFG.lang+can;
+  if(force||key!==evKey){evKey=key;
+    el.innerHTML=`<h4>${A("evTitle")[k]}</h4><p>${A("evDesc")[k]}</p><div class="stack-gap">
+      <button class="btn" id="evA" ${can?"":"disabled"}>${A("evA")[k].split("{v}").join(fmt(e.c))}</button>
+      <button class="btn" id="evB">${A("evB")[k]}</button></div><div class="timer" id="evT"></div>`;
+    $("evA").onclick=()=>resolveEvent(true);$("evB").onclick=()=>resolveEvent(false)}
+  $("evT").textContent=T("evExpire",{s:Math.ceil(e.t)});
+}
+function resolveEvent(a){const e=S.ev;if(!e)return;const k=e.k;
+  if(a&&EV_COST[k]>0){if(S.cash<e.c)return;S.cash-=e.c}
+  S.ev=null;S.events++;let res="";
+  switch(k){
+    case 0:if(a){S.heat=Math.max(0,S.heat-20);res=T("resHeat",{n:"−20"})}else{S.heat+=25;res=T("resHeat",{n:"+25"})}break;
+    case 1:if(a){S.nextAttack+=300;S.attack=null;res=T("resTruce")}else{S.nextAttack=Math.min(S.nextAttack,25);res=T("resWar")}break;
+    case 2:if(a){S.heat=Math.max(0,S.heat-35);res=T("resHeat",{n:"−35"})}else if(Math.random()<.5){S.heat+=30;res=T("resHeat",{n:"+30"})}else res=T("resLucky");break;
+    case 3:if(a){const l=Math.ceil(S.soldiers*.05);S.soldiers-=l;S.heat=Math.max(0,S.heat-15);res=T("resPurge",{n:l})}else{S.heat+=40;res=T("resHeat",{n:"+40"})}break;
+    case 4:if(a){if(Math.random()<.55){const v=e.c*3;earn(v);res=T("resGain",{v:fmt(v)})}else res=T("resLost")}else res=T("resNothing");break;
+    case 5:if(a){const n=Math.max(2,Math.ceil(S.soldiers*.1));S.soldiers+=n;res=T("resRecruits",{n})}else res=T("resNothing");break}
+  toast(A("evTitle")[k],res,a?"good":"");news(A("evTitle")[k]+": "+res);beep(a?"buy":"click");renderEvent();renderAll(true)}
+
+/* =================== TUTORIAL =================== */
+const TUT=[
+  {sel:null},
+  {sel:"#collect",wait:()=>S.cash>=15||S.owned[0]>0},
+  {sel:"#rk0",wait:()=>S.owned[0]>0,pre:()=>{if(tab!=="biz")setTab("biz")}},
+  {sel:"#curMission"},
+  {sel:"#crewcard"},
+  {sel:"#heatcard"},
+  {sel:"#tabs"},
+  {sel:"#gearBtn"}];
+function tutHide(){const a=$("tutSpot"),b=$("tutCard");if(a)a.remove();if(b)b.remove()}
+function tutRender(){
+  if(!S||S.tut<0||!inGame){tutHide();return}
+  if(S.tut>=TUT.length){S.tut=-1;tutHide();return}
+  let spot=$("tutSpot"),card=$("tutCard");
+  if(!spot){spot=document.createElement("div");spot.id="tutSpot";card=document.createElement("div");card.id="tutCard";document.body.append(spot,card)}
+  const st=TUT[S.tut],tx=A("tut")[S.tut],lastStep=S.tut===TUT.length-1;
+  if(st.pre)st.pre();
+  card.innerHTML=`<div class="tstep">${T("tutStep",{a:S.tut+1,b:TUT.length})}</div><h4>${tx[0]}</h4><p>${tx[1]}</p>${tx[2]?`<div class="hint">→ ${tx[2]}</div>`:""}
+    <div class="btnrow">${st.wait?"":`<button class="btn hot" id="tutNext">${lastStep?T("tutDone"):T("tutNext")}</button>`}<button class="btn" id="tutSkip">${T("tutSkip")}</button></div>`;
+  const nb=$("tutNext");if(nb)nb.onclick=tutAdvance;
+  $("tutSkip").onclick=()=>{S.tut=-1;tutHide();save()};
+  if(st.sel){const el=document.querySelector(st.sel);if(el)el.scrollIntoView({behavior:"smooth",block:"center"})}
+  tutPos();
+}
+function tutAdvance(){S.tut++;if(S.tut>=TUT.length){S.tut=-1;tutHide();save();return}beep("click");tutRender()}
+function tutCheck(){if(S.tut<0)return;const st=TUT[S.tut];if(st&&st.wait&&st.wait())tutAdvance()}
+function tutPos(){const spot=$("tutSpot"),card=$("tutCard");if(!spot||!S||S.tut<0)return;const st=TUT[S.tut];if(!st)return;
+  const el=st.sel&&document.querySelector(st.sel);const cw=card.offsetWidth,ch=card.offsetHeight;
+  if(!el){spot.style.left=W/2+"px";spot.style.top=H/2+"px";spot.style.width="0px";spot.style.height="0px";
+    card.style.left=Math.max(12,(W-cw)/2)+"px";card.style.top=Math.max(12,(H-ch)/2)+"px";return}
+  const r=el.getBoundingClientRect(),p=6;
+  spot.style.left=(r.left-p)+"px";spot.style.top=(r.top-p)+"px";spot.style.width=(r.width+p*2)+"px";spot.style.height=(r.height+p*2)+"px";
+  let top=r.bottom+14;if(top+ch>H-10)top=r.top-ch-14;if(top<10)top=Math.max(10,Math.min(H-ch-10,r.top+10));
+  const left=Math.max(12,Math.min(W-cw-12,r.left+r.width/2-cw/2));
+  card.style.left=left+"px";card.style.top=top+"px";
+}
+$("tutReplayBtn").onclick=()=>{if(!S||!inGame)return;S.tut=0;show("ovSettings",0);setPause(false);setTab("biz");tutRender()};
+
+/* =================== STELLE =================== */
+function buildStars(){const star=`<svg viewBox="0 0 24 24"><path d="M12 2l2.9 6.6 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.2l7.1-.6z"/></svg>`;$("stars").innerHTML=star.repeat(5)}
+function shake(id){const c=$(id);c.classList.remove("shake");void c.offsetWidth;c.classList.add("shake")}
+
+/* =================== RETATE / SOFFIATE =================== */
+function raid(){const lost=S.cash*0.3,sl=Math.floor(S.soldiers*0.1);S.cash-=lost;S.soldiers-=sl;S.heat=20;S.raids++;
+  news(T("raid",{v:fmt(lost),n:sl}),"hot");banner(T("raidBanner"),"-$"+fmt(lost),true);beep("bad");shake("heatcard")}
+function removeTip(){const t=$("tip");if(t)t.remove()}
+function spawnTip(){if($("tip")||income()<=0||paused||!inGame)return;
+  const tips=A("tips");const b=document.createElement("button");b.id="tip";b.textContent=tips[Math.floor(Math.random()*tips.length)];
+  b.style.left=rnd(8,70)+"vw";b.style.top=rnd(18,70)+"vh";
+  b.onclick=e=>{const v=Math.max(80,income()*60);earn(v);S.tips++;toast(T("luck",{v:fmt(v)}),"","good");beep("tip");burst(e.clientX,e.clientY,24);b.remove();renderAll()};
+  document.body.appendChild(b);setTimeout(()=>b.remove(),9000)}
+
+/* =================== TAB =================== */
+function setTab(t){tab=t;
+  $("tabs").querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x.dataset.tab===t));
+  document.querySelectorAll("[data-pane]").forEach(p=>p.hidden=p.dataset.pane!==t);
+  if(t==="set"){$("setPane").appendChild($("setBody"));buildSettings()}
+  renderAll(true)}
+$("tabs").querySelectorAll(".tab").forEach(b=>b.onclick=()=>setTab(b.dataset.tab));
+
+/* =================== RENDER =================== */
+function renderAll(force){
+  if(!S)return;
+  const ips=income();
+  $("cash").textContent="$"+fmt(S.cash);
+  $("ips").textContent="+$"+fmt(ips)+"/s";
+  $("clickinfo").textContent=T("perClick",{v:fmt(clickVal())});
+  const st=stars();
+  $("stars").querySelectorAll("svg").forEach((s,i)=>s.classList.toggle("on",i<st));
+  $("stars").classList.toggle("flash",S.heat>=80);
+  $("heatfill").style.width=Math.min(100,S.heat)+"%";
+  $("heatpct").textContent=Math.floor(S.heat)+"%";
+  const hr=heatRate();$("heatrate").textContent=Math.abs(hr)<0.01?T("heatStable"):(hr>0?"+":"")+hr.toFixed(2)+"/s";
+  $("lawyer").textContent=T("lawyerBtn",{v:fmt(lawyerCost())});$("lawyer").disabled=S.cash<lawyerCost()||S.heat<5;
+  $("sold").textContent=fmt(S.soldiers);$("cap").textContent=fmt(units())+" / "+fmt(capacity());$("def").textContent=fmt(defense());
+  const ef=efficiency();$("effpct").textContent=Math.round(ef*100)+"%";$("efffill").style.width=(ef*100)+"%";
+  $("effwarn").hidden=ef>=0.999;if(ef<0.999)$("effwarn").textContent=T("lowEff",{p:Math.round(ef*100)});
+  $("hire1").textContent=T("hire",{n:1,v:fmt(sCost(1))});$("hire1").disabled=S.cash<sCost(1);
+  $("hire10").textContent=T("hire",{n:10,v:fmt(sCost(10))});$("hire10").disabled=S.cash<sCost(10);
+  $("resp").textContent=S.respect;$("respbonus").textContent="+"+S.respect*10+"%";$("respnext").textContent="+"+respectGain();$("retire").disabled=respectGain()<1;
+  renderCurMission();
+  if(tab==="biz"){
+    RACKETS.forEach((r,i)=>{const unl=i===0||S.owned[i-1]>0||S.owned[i]>0;$("rk"+i).classList.toggle("locked",!unl);
+      $("rn"+i).textContent=S.owned[i];
+      const each=r.inc*racketMult(i)*globalMult()*ef;
+      $("rm"+i).textContent=unl?`$${fmt(each)}/s ${T("each")} · $${fmt(each*S.owned[i])}/s`:T("unlockAt",{r:rName(i-1)});
+      const nx=[10,25,50,100].find(m=>S.owned[i]<m)||100;$("rp"+i).style.width=Math.min(100,S.owned[i]/nx*100)+"%";
+      const n=qty==="max"?Math.max(1,rMax(i)):+qty;const c=rCost(i,n);const b=$("rb"+i);
+      b.textContent=(qty==="1"?"":"×"+n+" ")+"$"+fmt(c);b.disabled=!unl||S.cash<c});
+    renderUps(force);
+  }
+  const cb=$("combo");cb.hidden=combo<5;if(combo>=5)cb.textContent=T("combo",{v:comboMult().toFixed(1)});
+  if(tab==="heist")renderHeists(force);
+  if(tab==="market")renderMarket(force);
+  if(tab==="fam")renderLt(force);
+  if(tab==="map")renderMap(force);
+  if(force&&tab==="mis")renderMissions();
+  if(force&&tab==="ach")renderAch();
+  if(tab==="log"){if(force)renderNews();renderStats()}
+}
+function renderStats(){
+  const h=Math.floor(S.playTime/3600),m=Math.floor(S.playTime/60)%60;
+  $("stats").innerHTML=[["stTotal","$"+fmt(S.lifetime)],["stClicks",fmt(S.totalClicks)],["stRaids",S.raids],["stRepel",S.repelled],["stTips",S.tips],["stMissions",S.mIdx+" / "+MISSIONS.length],["stHeists",S.heistsDone],["stProfit",(S.mProfit<0?"-$":"$")+fmt(Math.abs(S.mProfit))],["stEvents",S.events],["stGen",S.gen],["stTime",T("time",{h,m})]]
+    .map(([k,v])=>`<dt>${T(k)}</dt><dd>${v}</dd>`).join("");
+}
+
+/* =================== LOOP =================== */
+let mktT=0,last=performance.now(),acc=0,uiT=0,logicT=0,fpsT=0,frames=0,saveT=0,tipT=0;
+function frame(now){
+  requestAnimationFrame(frame);
+  const target=CFG.fps>0?1000/CFG.fps:0;
+  if(target&&now-last<target-1)return;
+  const dt=Math.min(0.25,(now-last)/1000);last=now;
+  frames++;fpsT+=dt;if(fpsT>=0.5){$("fps").textContent=Math.round(frames/fpsT)+" FPS";frames=0;fpsT=0}
+  if(CFG.bg)drawCity(dt);else if(!city.static){bctx.fillStyle="#0b0913";bctx.fillRect(0,0,W,H)}
+  drawParts(dt);
+  if(inGame&&!paused&&S){
+    earn(income()*dt);S.playTime+=dt;
+    S.heat=Math.max(0,S.heat+heatRate()*dt);S.maxStars=Math.max(S.maxStars,stars());
+    if(S.heat>=100)raid();
+    updateAttacks(dt);updateHeist(dt);updateEvents(dt);
+    mktT+=dt;if(mktT>=2){mktT=0;tickMarket()}
+    if(combo>0&&performance.now()-lastClick>900)combo=0;
+    if(S.tut>=0)tutPos();
+    logicT+=dt;if(logicT>=0.5){logicT=0;checkMission();checkAch();tutCheck()}
+    uiT+=dt;if(uiT>=0.1){uiT=0;renderAll()}
+    saveT+=dt;if(saveT>=5){saveT=0;save()}
+    tipT+=dt;if(tipT>=20){tipT=0;if(Math.random()<0.4)spawnTip()}
+  }
+}
+addEventListener("resize",resize);
+addEventListener("visibilitychange",()=>{if(document.hidden)save()});
+
+/* =================== BOOT =================== */
+function boot(data){
+  resize();applyCfg();applyTexts();
+  if(data&&data.state){startGame(Object.assign(fresh(),data.state),false);if(data.tab){}}
+  requestAnimationFrame(t=>{last=t;requestAnimationFrame(frame)});
+}
+window.claude?.hot?.snapshot?.(()=>({state:inGame?S:null}));
+window.claude?.hot?.ready ? window.claude.hot.ready(boot) : boot(window.claude?.hot?.data ?? {});
+</script>
+
+</body></html>

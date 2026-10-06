@@ -1,0 +1,1185 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Cartel Tycoon</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: notte di città sotto i lampioni al sodio — skyline animato dietro, menu a schermo intero, poi la plancia di gioco a due colonne con schede */
+:root{
+  --night:#0d1117; --asphalt:rgba(22,28,37,.94); --curb:#222b38; --line:#2f3a4a;
+  --text:#e6e1d6; --muted:#8e97a6;
+  --sodium:#ffa630; --good:#5fd38d; --bad:#ff5a5a; --siren:#4aa3ff;
+  --f-display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --f-body:"Barlow","Segoe UI",system-ui,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+html,body{background:var(--night);color:var(--text)}
+body{font:15px/1.45 var(--f-body);padding-inline:16px;padding-block:14px 40px}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+.screen{position:relative;z-index:1}
+#fps{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));right:10px;z-index:70;font:600 12px var(--f-mono);color:var(--good);background:rgba(0,0,0,.55);padding:3px 7px;border-radius:4px}
+.wrap{max-width:1240px;margin:0 auto;display:grid;gap:14px}
+h1,h2,h3{font-family:var(--f-display);margin:0;letter-spacing:.02em;text-wrap:balance}
+button{font:600 14px var(--f-body);cursor:pointer;border-radius:6px;border:1px solid var(--line);background:var(--curb);color:var(--text);padding:7px 12px}
+button:hover:not(:disabled){border-color:var(--sodium);color:var(--sodium)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--sodium);outline-offset:2px}
+button:disabled{opacity:.4;cursor:not-allowed}
+button.primary{background:var(--sodium);color:#1a1004;border-color:var(--sodium)}
+button.primary:hover:not(:disabled){background:#ffbb5c;color:#1a1004}
+button.danger{border-color:#5a2424;color:var(--bad)}
+input[type=number]{font:14px var(--f-mono);width:66px;background:var(--night);color:var(--text);border:1px solid var(--line);border-radius:6px;padding:6px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* menu */
+#menu{min-height:calc(100vh - 54px);display:grid;align-content:center;justify-items:start;max-width:1240px;margin:0 auto;padding-block:20px}
+.logo{font:900 clamp(56px,13vw,150px)/.82 var(--f-display);text-transform:uppercase;color:var(--sodium);text-shadow:0 0 40px rgba(255,166,48,.4)}
+.logo span{display:block;color:var(--text);text-shadow:none}
+.tag{margin:14px 0 30px;color:var(--muted);font-size:14px;letter-spacing:.2em;text-transform:uppercase}
+.mbtns{display:grid;gap:10px;width:min(360px,100%)}
+.mbtns button{font:800 24px var(--f-display);text-transform:uppercase;letter-spacing:.06em;text-align:left;padding:12px 18px;background:rgba(13,17,23,.78);display:grid;gap:2px}
+.mbtns button small{font:500 12px var(--f-body);letter-spacing:.04em;text-transform:none;color:var(--muted)}
+.mbtns button.primary{background:var(--sodium);color:#1a1004}
+.mbtns button.primary small{color:#5a3a0a}
+.ver{margin-top:28px;font:12px var(--f-mono);color:var(--muted)}
+
+/* settings */
+#settings .box{max-width:600px;margin:6vh auto 0;background:var(--asphalt);border:1px solid var(--line);border-radius:12px;padding:20px;display:grid;gap:18px}
+#settings h2{font-size:40px;font-weight:900;text-transform:uppercase;color:var(--sodium)}
+.set{display:grid;gap:8px}
+.set .k,.lbl{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button[aria-pressed=true],.tabs button[aria-selected=true]{background:var(--sodium);color:#1a1004;border-color:var(--sodium)}
+.setfoot{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between}
+
+/* game header */
+.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px}
+.brand h1{font-size:clamp(34px,6vw,54px);font-weight:900;line-height:.85;color:var(--sodium);text-transform:uppercase;text-shadow:0 0 24px rgba(255,166,48,.35)}
+.brand .rank{font:600 13px var(--f-mono);color:var(--muted);margin-top:6px}
+.xpbar{height:4px;width:220px;max-width:100%;background:var(--curb);border-radius:2px;margin-top:4px;overflow:hidden}
+.xpbar i{display:block;height:100%;background:var(--sodium)}
+.where{text-align:right;display:flex;gap:14px;align-items:flex-end}
+.where .zone{font:800 28px var(--f-display);text-transform:uppercase;line-height:1}
+.where .day{font-family:var(--f-mono);color:var(--sodium)}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.stat{background:var(--asphalt);padding:10px 12px;min-width:0}
+.stat .v{font:600 18px var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.meter{height:5px;border-radius:3px;background:var(--night);margin-top:6px;overflow:hidden}
+.meter i{display:block;height:100%;border-radius:3px;transition:width .4s}
+
+.grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);gap:14px}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--asphalt);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+.panel h2{font-size:24px;font-weight:800;text-transform:uppercase;display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+.panel h2 small{font:500 12px var(--f-body);color:var(--muted);letter-spacing:.06em;text-transform:none}
+.col{display:grid;gap:14px;align-content:start;min-width:0}
+
+.tablewrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:720px}
+th{font:600 11px var(--f-body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px;border-bottom:1px solid var(--curb);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.prod b{font:800 18px var(--f-display);letter-spacing:.03em;text-transform:uppercase}
+td.prod span{display:block;font-size:12px;color:var(--muted)}
+td.prod em{display:block;font-style:normal;font-size:12px;color:var(--siren)}
+.low{color:var(--bad)}
+.trend-up{color:var(--good)} .trend-down{color:var(--bad)}
+.na{color:var(--muted);font-style:italic}
+.acts{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.acts button{padding:6px 9px}
+
+.travel{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.travel button{text-align:left;padding:10px 12px;display:grid;gap:2px}
+.travel button b{font:800 19px var(--f-display);text-transform:uppercase}
+.travel button span{font:500 12px var(--f-body);color:var(--muted)}
+.travel button.here{border-color:var(--sodium);background:rgba(255,166,48,.08)}
+
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.tabs button{padding:6px 10px;font-size:13px;position:relative}
+.tabs button .dot{position:absolute;top:-4px;right:-4px;width:9px;height:9px;border-radius:50%;background:var(--good)}
+
+.chip{display:inline-block;font:600 11px var(--f-body);letter-spacing:.1em;text-transform:uppercase;padding:2px 7px;border-radius:999px;border:1px solid #24553a;color:var(--good)}
+.chip.lock{border-color:var(--line);color:var(--muted)}
+.list{display:grid;gap:8px}
+.item{border:1px solid var(--line);border-radius:8px;padding:10px;display:grid;gap:6px}
+.item header{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.item header b{font:800 18px var(--f-display);text-transform:uppercase}
+.item .meta{font-size:13px;color:var(--muted)}
+.item.done{border-color:#24553a}
+.item.locked{opacity:.6}
+.pbar{height:5px;background:var(--night);border-radius:3px;overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--good)}
+.svc{display:grid;gap:8px}
+.svc .row{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--curb)}
+.svc .row:first-child{border-top:0}
+.svc .row div{min-width:0}
+.svc .row small{display:block;color:var(--muted);font-size:12px}
+.inv{display:grid;gap:4px;font-size:14px}
+.inv div{display:flex;justify-content:space-between;gap:8px}
+.empty{color:var(--muted);font-size:13px;margin:0}
+.kv{display:grid;grid-template-columns:1fr auto;gap:4px 12px;font-size:14px}
+.kv span:nth-child(even){font-family:var(--f-mono);text-align:right}
+.ach{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.ach div{border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:12px;color:var(--muted)}
+.ach div b{display:block;font:800 15px var(--f-display);text-transform:uppercase;color:var(--muted)}
+.ach div.on{border-color:var(--sodium)}
+.ach div.on b{color:var(--sodium)}
+
+.log{max-height:220px;overflow-y:auto;display:grid;gap:4px;font-size:13px}
+.log p{margin:0;padding-left:10px;border-left:2px solid var(--line)}
+.log p.g{border-color:var(--good)} .log p.b{border-color:var(--bad)} .log p.s{border-color:var(--siren)} .log p.a{border-color:var(--sodium)}
+.log p .d{font-family:var(--f-mono);color:var(--muted);margin-right:6px}
+
+.modal{position:fixed;inset:0;background:rgba(5,7,10,.78);display:grid;place-items:center;padding:16px;z-index:50}
+.modal .box{background:#161c25;border:1px solid var(--line);border-radius:12px;max-width:460px;width:100%;padding:20px;display:grid;gap:12px;box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal.siren .box{animation:siren 1s infinite alternate;border-width:2px}
+@keyframes siren{from{border-color:var(--bad)}to{border-color:var(--siren)}}
+.modal h3{font-size:32px;font-weight:900;text-transform:uppercase;color:var(--sodium);line-height:1}
+.modal p{margin:0}
+.modal .btns{display:flex;flex-wrap:wrap;gap:8px}
+@media (prefers-reduced-motion:reduce){.modal.siren .box{animation:none;border-color:var(--bad)}.meter i{transition:none}}
+.toast{position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--curb);border:1px solid var(--sodium);padding:8px 14px;border-radius:8px;font-size:14px;z-index:60;max-width:calc(100% - 32px)}
+.foot{color:var(--muted);font-size:12px;text-align:center}
+.tut-back{position:fixed;inset:0;background:rgba(5,7,10,.66);z-index:40}
+.tut-hl{position:relative;z-index:42;box-shadow:0 0 0 3px var(--sodium),0 0 36px rgba(255,166,48,.45)}
+.tut{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:45;width:min(560px,calc(100% - 32px));background:#161c25;border:1px solid var(--sodium);border-radius:12px;padding:16px 18px;display:grid;gap:8px;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.tut .step{font:600 12px var(--f-mono);color:var(--muted);letter-spacing:.1em}
+.tut h3{font-size:30px;font-weight:900;text-transform:uppercase;color:var(--sodium);line-height:1}
+.tut p{margin:0;max-width:62ch}
+.tut .tbtns{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:4px}
+.tut .ghost{background:none;border-color:transparent;color:var(--muted);padding-inline:4px}
+.tut .dots{display:flex;gap:4px}
+#gHelp{font:800 16px var(--f-display);width:36px;padding:7px 0}
+</style>
+
+<canvas id="bg" aria-hidden="true"></canvas>
+<div id="fps" hidden>0 FPS</div>
+
+<section class="screen" id="menu">
+  <h1 class="logo">Cartel<span>Tycoon</span></h1>
+  <p class="tag" data-t="tagline"></p>
+  <div class="mbtns">
+    <button class="primary" id="mContinue"><span data-t="menu.continue"></span><small id="saveInfo"></small></button>
+    <button id="mNew"><span data-t="menu.new"></span><small id="diffInfo"></small></button>
+    <button id="mSettings"><span data-t="menu.settings"></span><small id="setInfo"></small></button>
+  </div>
+  <p class="ver">v1.1 · <span id="bestInfo"></span></p>
+</section>
+
+<section class="screen" id="settings" hidden>
+  <div class="box">
+    <h2 data-t="set.title"></h2>
+    <div class="set"><div class="k" data-t="set.lang"></div><div class="seg" id="segLang"></div></div>
+    <div class="set"><div class="k" data-t="set.fps"></div><div class="seg" id="segFps"></div></div>
+    <div class="set"><div class="k" data-t="set.showFps"></div><div class="seg" id="segShow"></div></div>
+    <div class="set"><div class="k" data-t="set.anim"></div><div class="seg" id="segAnim"></div></div>
+    <div class="set"><div class="k" data-t="set.diff"></div><div class="seg" id="segDiff"></div></div>
+    <div class="set"><div class="k" data-t="set.len"></div><div class="seg" id="segLen"></div></div>
+    <div class="setfoot">
+      <button class="danger" id="sReset" data-t="set.reset"></button>
+      <button class="primary" id="sBack" data-t="set.back"></button>
+    </div>
+  </div>
+</section>
+
+<section class="screen" id="game" hidden>
+<div class="wrap">
+  <div class="top">
+    <div class="brand"><h1>Cartel Tycoon</h1><div class="rank" id="rankLbl"></div><div class="xpbar"><i id="xpFill"></i></div></div>
+    <div class="where">
+      <div><div class="lbl" data-t="hud.youAre"></div><div class="zone" id="zoneName"></div><div class="day" id="dayLbl"></div></div>
+      <button id="gHelp" aria-label="Tutorial" title="Tutorial">?</button>
+      <button id="gMenu" data-t="hud.menu"></button>
+    </div>
+  </div>
+  <div class="stats" id="stats"></div>
+  <div class="grid">
+    <div class="col">
+      <section class="panel" id="pMarket">
+        <h2><span data-t="p.market"></span> <small id="mktNote"></small></h2>
+        <div class="tablewrap"><table>
+          <thead><tr><th data-t="th.prod"></th><th data-t="th.price"></th><th data-t="th.supply"></th><th data-t="th.demand"></th><th data-t="th.have"></th><th data-t="th.paid"></th><th data-t="th.qty"></th></tr></thead>
+          <tbody id="mkt"></tbody>
+        </table></div>
+      </section>
+      <section class="panel" id="pTravel">
+        <h2><span data-t="p.travel"></span> <small data-t="p.travelNote"></small></h2>
+        <div class="travel" id="travel"></div>
+        <div style="margin-top:10px"><button id="waitBtn" data-t="p.wait"></button></div>
+      </section>
+      <section class="panel" id="pLog">
+        <h2><span data-t="p.news"></span> <small data-t="p.newsNote"></small></h2>
+        <div class="log" id="log"></div>
+      </section>
+    </div>
+    <div class="col">
+      <section class="panel" id="pBag"><h2><span data-t="p.bag"></span> <small id="capLbl"></small></h2><div class="inv" id="inv"></div></section>
+      <section class="panel" id="pTabs">
+        <div class="tabs" role="tablist" id="tabs"></div>
+        <div id="tabBody"></div>
+      </section>
+      <section class="panel" id="pZone"><h2><span data-t="p.zone"></span> <small id="svcNote"></small></h2><div class="svc" id="svc"></div></section>
+    </div>
+  </div>
+  <p class="foot" data-t="foot"></p>
+</div>
+<div class="tut-back" id="tutBack" hidden></div>
+<div class="tut" id="tut" role="dialog" aria-modal="true" aria-labelledby="tutTitle" hidden>
+  <div class="step" id="tutStep"></div>
+  <h3 id="tutTitle"></h3>
+  <p id="tutText"></p>
+  <div class="tbtns"><button id="tutSkip" class="ghost"></button><span style="flex:1"></span><button id="tutPrev"></button><button id="tutNext" class="primary"></button></div>
+</div>
+</section>
+
+<div class="modal" id="modal" hidden><div class="box" role="dialog" aria-modal="true" aria-labelledby="mTitle"><h3 id="mTitle"></h3><p id="mText"></p><div class="btns" id="mBtns"></div></div></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+(function(){
+/* ================= LINGUE: [it, en, ru, es] ================= */
+const LANGS=[['it','Italiano','it-IT'],['en','English','en-US'],['ru','Русский','ru-RU'],['es','Español','es-ES']];
+const L={
+"tagline":["Prenditi la città, una notte alla volta","Take the city, one night at a time","Захвати город, ночь за ночью","Toma la ciudad, noche a noche"],
+"menu.continue":["Continua la partita","Continue","Продолжить","Continuar partida"],
+"menu.new":["Nuova partita","New game","Новая игра","Nueva partida"],
+"menu.settings":["Impostazioni","Settings","Настройки","Ajustes"],
+"menu.noSave":["Nessun salvataggio","No saved game","Нет сохранения","Sin partida guardada"],
+"menu.saveInfo":["Notte {d} · {Z} · {M}","Night {d} · {Z} · {M}","Ночь {d} · {Z} · {M}","Noche {d} · {Z} · {M}"],
+"menu.diffInfo":["{x} · {n} notti","{x} · {n} nights","{x} · {n} ночей","{x} · {n} noches"],
+"menu.best":["Record: {M}","Best: {M}","Рекорд: {M}","Récord: {M}"],
+"menu.noBest":["Nessun record","No record yet","Рекордов нет","Sin récord"],
+"set.title":["Impostazioni","Settings","Настройки","Ajustes"],
+"set.lang":["Lingua","Language","Язык","Idioma"],
+"set.fps":["Limite FPS","FPS limit","Лимит FPS","Límite de FPS"],
+"set.unl":["Illimitati","Unlimited","Без лимита","Ilimitado"],
+"set.showFps":["Mostra contatore FPS","Show FPS counter","Счётчик FPS","Mostrar contador FPS"],
+"set.anim":["Sfondo animato","Animated background","Анимированный фон","Fondo animado"],
+"set.on":["Sì","On","Вкл","Sí"],
+"set.off":["No","Off","Выкл","No"],
+"set.diff":["Difficoltà (nuove partite)","Difficulty (new games)","Сложность (новые игры)","Dificultad (partidas nuevas)"],
+"set.len":["Durata partita (nuove partite)","Game length (new games)","Длительность (новые игры)","Duración (partidas nuevas)"],
+"set.nights":["{n} notti","{n} nights","{n} ночей","{n} noches"],
+"diff.easy":["Facile","Easy","Легко","Fácil"],
+"diff.normal":["Normale","Normal","Нормально","Normal"],
+"diff.hard":["Difficile","Hard","Сложно","Difícil"],
+"set.back":["Indietro","Back","Назад","Volver"],
+"set.reset":["Cancella salvataggio","Delete save","Удалить сохранение","Borrar partida"],
+"set.resetQ":["Cancellare il salvataggio?","Delete the saved game?","Удалить сохранение?","¿Borrar la partida guardada?"],
+"set.resetT":["La partita in corso andrà persa. Il record resta.","Your current game will be lost. Your best score stays.","Текущая игра будет потеряна. Рекорд останется.","Se perderá la partida actual. El récord se mantiene."],
+"set.resetDone":["Salvataggio cancellato.","Save deleted.","Сохранение удалено.","Partida borrada."],
+"new.q":["Iniziare una nuova partita?","Start a new game?","Начать новую игру?","¿Empezar una nueva partida?"],
+"new.t":["Il salvataggio attuale verrà sovrascritto.","Your current save will be overwritten.","Текущее сохранение будет перезаписано.","Se sobrescribirá la partida guardada."],
+"btn.yes":["Inizia","Start","Начать","Empezar"],
+"btn.delete":["Cancella","Delete","Удалить","Borrar"],
+"btn.cancel":["Annulla","Cancel","Отмена","Cancelar"],
+"hud.youAre":["Sei a","You are in","Вы в районе","Estás en"],
+"hud.menu":["Menu","Menu","Меню","Menú"],
+"hud.night":["Notte {d} di {n}","Night {d} of {n}","Ночь {d} из {n}","Noche {d} de {n}"],
+"hud.lvl":["Lv {n} · {x} · {a}/{b} XP","Lv {n} · {x} · {a}/{b} XP","Ур. {n} · {x} · {a}/{b} XP","Nv {n} · {x} · {a}/{b} XP"],
+"st.cash":["Contanti","Cash","Наличные","Efectivo"],
+"st.bank":["Banca","Bank","Банк","Banco"],
+"st.debt":["Debito","Debt","Долг","Deuda"],
+"st.worth":["Patrimonio","Net worth","Капитал","Patrimonio"],
+"st.health":["Salute","Health","Здоровье","Salud"],
+"st.heat":["Polizia","Heat","Розыск","Policía"],
+"p.market":["Mercato","Market","Рынок","Mercado"],
+"p.travel":["Spostati","Travel","Поездка","Moverse"],
+"p.travelNote":["ogni viaggio = una notte","each trip = one night","каждая поездка = одна ночь","cada viaje = una noche"],
+"p.wait":["Resta qui una notte","Stay here one night","Остаться на ночь","Quedarse una noche"],
+"p.news":["Cronaca","Street news","Новости улиц","Crónica"],
+"p.newsNote":["le ultime dalla strada","latest from the street","последнее с улиц","lo último de la calle"],
+"p.bag":["Zaino","Backpack","Рюкзак","Mochila"],
+"p.zone":["In zona","Around here","В районе","En la zona"],
+"th.prod":["Roba","Product","Товар","Producto"],
+"th.price":["Prezzo","Price","Цена","Precio"],
+"th.supply":["Disponibili","In stock","В наличии","Disponibles"],
+"th.demand":["Richiesta","Demand","Спрос","Demanda"],
+"th.have":["Hai","Owned","Есть","Tienes"],
+"th.paid":["Pagata","Paid","Куплено по","Pagado"],
+"th.qty":["Quantità","Quantity","Кол-во","Cantidad"],
+"na":["introvabile","unavailable","нет в продаже","no hay"],
+"inf.best":["Meglio a {Z}: {M}","Best in {Z}: {M}","Дороже всего: {Z}, {M}","Mejor en {Z}: {M}"],
+"b.max":["Max","Max","Макс","Máx"],
+"b.buy":["Compra","Buy","Купить","Comprar"],
+"b.sell":["Vendi","Sell","Продать","Vender"],
+"cap":["{n} / {c} dosi","{n} / {c} units","{n} / {c} доз","{n} / {c} dosis"],
+"guns":["{n} armi","{n} guns","оружие: {n}","{n} armas"],
+"emptyInv":["Zaino vuoto. Compra qualcosa dal mercato.","Backpack is empty. Buy something at the market.","Рюкзак пуст. Купите что-нибудь на рынке.","Mochila vacía. Compra algo en el mercado."],
+"t.full":["Lo zaino è pieno.","Backpack is full.","Рюкзак полон.","La mochila está llena."],
+"t.noCash":["Non hai abbastanza contanti.","Not enough cash.","Не хватает наличных.","No tienes suficiente efectivo."],
+"t.noneSell":["Non ne hai da vendere.","You have none to sell.","Нечего продавать.","No tienes para vender."],
+"t.noneTake":["Niente da riprendere o zaino pieno.","Nothing to take or backpack full.","Нечего забрать или рюкзак полон.","Nada que recoger o mochila llena."],
+"t.supply":["Lo spacciatore ne ha solo {n}.","The supplier only has {n}.","У поставщика только {n}.","El proveedor solo tiene {n}."],
+"t.demand":["Qui ne comprano solo {n}.","Buyers here only want {n}.","Здесь купят только {n}.","Aquí solo compran {n}."],
+"t.saved":["Partita salvata.","Game saved.","Игра сохранена.","Partida guardada."],
+"foot":["Gioco di fantasia: le sostanze sono inventate. Salvataggio e record restano su questo browser.","A work of fiction: all substances are made up. Save and best score stay in this browser.","Вымышленная игра: все вещества выдуманы. Сохранение и рекорд хранятся в этом браузере.","Juego de ficción: las sustancias son inventadas. La partida y el récord se guardan en este navegador."],
+/* schede */
+"tab.spots":["Piazze","Corners","Точки","Puntos"],
+"tab.biz":["Attività","Businesses","Бизнес","Negocios"],
+"tab.mis":["Missioni","Missions","Задания","Misiones"],
+"tab.upg":["Potenziamenti","Upgrades","Улучшения","Mejoras"],
+"tab.prog":["Progressi","Progress","Прогресс","Progreso"],
+/* piazze */
+"spot.note":["vendono da sole ogni notte","sell on their own every night","продают сами каждую ночь","venden solos cada noche"],
+"spot.empty":["Nessuna piazza. Aprine una dal pannello \"In zona\": i tuoi pusher venderanno le scorte mentre giri la città.","No corners yet. Open one from \"Around here\": your dealers sell the stock while you move around.","Точек нет. Откройте точку в разделе «В районе»: дилеры будут продавать, пока вы ездите по городу.","Sin puntos. Abre uno en \"En la zona\": tus camellos venderán mientras recorres la ciudad."],
+"spot.dealers":["{n} pusher","{n} dealers","дилеров: {n}","{n} camellos"],
+"spot.stock":["Scorte","Stock","Запас","Existencias"],
+"spot.none":["vuote","empty","пусто","vacías"],
+"spot.earned":["Incassato","Earned","Заработано","Ganado"],
+"spot.leave":["Lascia tutta la roba","Drop all stock","Оставить весь товар","Dejar todo"],
+"spot.take":["Riprendi roba","Take stock back","Забрать товар","Recoger"],
+"spot.hire":["Assumi pusher ({M})","Hire dealer ({M})","Нанять дилера ({M})","Contratar ({M})"],
+"spot.go":["Vai a {Z} per rifornirla. Paga: {M}/notte.","Go to {Z} to restock it. Wages: {M}/night.","Езжайте в {Z}, чтобы пополнить. Зарплата: {M}/ночь.","Ve a {Z} para reabastecer. Paga: {M}/noche."],
+/* attività */
+"biz.note":["reddito pulito ogni notte","clean income every night","чистый доход каждую ночь","ingresos limpios cada noche"],
+"biz.total":["Totale: {M}/notte","Total: {M}/night","Итого: {M}/ночь","Total: {M}/noche"],
+"biz.inc":["Rende {M}/notte","Earns {M}/night","Доход {M}/ночь","Rinde {M}/noche"],
+"biz.heat":["copertura: −{n} polizia/notte","cover: −{n} heat/night","прикрытие: −{n} розыска/ночь","tapadera: −{n} policía/noche"],
+"biz.lvl":["Livello {n}/3","Level {n}/3","Уровень {n}/3","Nivel {n}/3"],
+"biz.up":["Migliora {M}","Upgrade {M}","Улучшить {M}","Mejorar {M}"],
+"biz.max":["Al massimo","Maxed","Максимум","Al máximo"],
+"biz.lock":["Serve livello {n}","Requires level {n}","Нужен уровень {n}","Requiere nivel {n}"],
+"biz.owned":["Tua","Owned","Ваш","Tuyo"],
+/* potenziamenti */
+"upg.note":["valgono per tutta la partita","last the whole game","действуют всю игру","duran toda la partida"],
+"upg.bag":["Contenitore","Carrier","Тара","Contenedor"],
+"upg.now":["Ora: {x} · {n} dosi","Now: {x} · {n} units","Сейчас: {x} · {n} доз","Ahora: {x} · {n} dosis"],
+"upg.next":["Prossimo: {x} ({n} dosi)","Next: {x} ({n} units)","Далее: {x} ({n} доз)","Siguiente: {x} ({n} dosis)"],
+"upg.top":["Hai il contenitore migliore","You have the best carrier","У вас лучшая тара","Tienes el mejor contenedor"],
+"upg.owned":["Comprato","Owned","Куплено","Comprado"],
+/* missioni */
+"m.note":["contratti dei boss","contracts from the bosses","заказы от боссов","encargos de los jefes"],
+"m.deliver":["Porta {q} {P} a {Z}","Bring {q} {P} to {Z}","Доставьте {q} «{P}» в {Z}","Lleva {q} {P} a {Z}"],
+"m.sell":["Incassa {M} in vendite","Make {M} in sales","Продайте на {M}","Vende por {M}"],
+"m.spot":["Apri una piazza a {Z}","Open a corner in {Z}","Откройте точку в {Z}","Abre un punto en {Z}"],
+"m.due":["Entro la notte {d}","By night {d}","До ночи {d}","Antes de la noche {d}"],
+"m.reward":["Premio {M} · {x} XP","Reward {M} · {x} XP","Награда {M} · {x} XP","Premio {M} · {x} XP"],
+"m.progress":["{a} / {b}","{a} / {b}","{a} / {b}","{a} / {b}"],
+"m.deliverBtn":["Consegna","Deliver","Доставить","Entregar"],
+"m.claim":["Riscuoti","Claim","Забрать","Cobrar"],
+"m.drop":["Rinuncia","Drop","Отказаться","Abandonar"],
+"m.goTo":["Vai a {Z} con la roba","Go to {Z} with the goods","Езжайте в {Z} с товаром","Ve a {Z} con la mercancía"],
+"m.none":["Nessuna missione. Ne arrivano di nuove ogni notte.","No missions. New ones arrive every night.","Заданий нет. Новые появляются каждую ночь.","No hay misiones. Llegan nuevas cada noche."],
+/* progressi */
+"pr.max":["Livello massimo raggiunto","Max level reached","Максимальный уровень","Nivel máximo alcanzado"],
+"pr.next":["Prossimo grado: {x} a {n} XP","Next rank: {x} at {n} XP","Следующий ранг: {x} при {n} XP","Siguiente rango: {x} a {n} XP"],
+"pr.stats":["Statistiche","Stats","Статистика","Estadísticas"],
+"pr.ach":["Traguardi {a}/{b}","Achievements {a}/{b}","Достижения {a}/{b}","Logros {a}/{b}"],
+"pr.sold":["Incassato in vendite","Sales revenue","Выручка","Ventas"],
+"pr.units":["Dosi vendute","Units sold","Продано доз","Dosis vendidas"],
+"pr.missions":["Missioni completate","Missions done","Заданий выполнено","Misiones hechas"],
+"pr.raids":["Retate subite","Raids suffered","Облав","Redadas sufridas"],
+"pr.escapes":["Fughe riuscite","Escapes","Удачных побегов","Huidas"],
+"pr.bizInc":["Reddito attività","Business income","Доход бизнеса","Ingresos de negocios"],
+/* servizi */
+"sv.open":["Apri una piazza qui","Open a corner here","Открыть точку здесь","Abrir un punto aquí"],
+"sv.openS":["Costa {M} con un pusher incluso.","Costs {M}, one dealer included.","Стоит {M}, один дилер в комплекте.","Cuesta {M}, un camello incluido."],
+"sv.openB":["Apri","Open","Открыть","Abrir"],
+"sv.shark":["Strozzino","Loan shark","Ростовщик","Usurero"],
+"sv.sharkS":["Debito {M} · +{p}% a notte","Debt {M} · +{p}% per night","Долг {M} · +{p}% за ночь","Deuda {M} · +{p}% por noche"],
+"sv.repay":["Restituisci tutto","Repay all","Вернуть всё","Pagar todo"],
+"sv.borrow":["Prendi {M}","Borrow {M}","Занять {M}","Pedir {M}"],
+"sv.bank":["Banca","Bank","Банк","Banco"],
+"sv.bankS":["Saldo {M} · +1% a notte, al sicuro dai furti","Balance {M} · +1% per night, safe from theft","Баланс {M} · +1% за ночь, защищено от краж","Saldo {M} · +1% por noche, a salvo de robos"],
+"sv.dep":["Deposita tutto","Deposit all","Внести всё","Depositar todo"],
+"sv.wd":["Preleva tutto","Withdraw all","Снять всё","Retirar todo"],
+"sv.law":["Avvocato","Lawyer","Адвокат","Abogado"],
+"sv.lawS":["Abbassa l'attenzione della polizia di 30","Lowers police heat by 30","Снижает розыск на 30","Baja la atención policial en 30"],
+"sv.pay":["Paga {M}","Pay {M}","Заплатить {M}","Pagar {M}"],
+"sv.buy":["Compra {M}","Buy {M}","Купить {M}","Comprar {M}"],
+"sv.arms":["Armiere","Arms dealer","Оружейник","Armero"],
+"sv.armsS":["Armi: {n}/3 · aiutano negli scontri","Guns: {n}/3 · help in fights","Оружие: {n}/3 · помогает в драках","Armas: {n}/3 · ayudan en peleas"],
+"sv.doc":["Medico di fiducia","Back-alley doctor","Подпольный врач","Médico de confianza"],
+"sv.docS":["Salute {n}/100","Health {n}/100","Здоровье {n}/100","Salud {n}/100"],
+"sv.heal":["Curati {M}","Heal {M}","Лечиться {M}","Curarse {M}"],
+"sv.fit":["Sei in forma","You're fine","Вы в форме","Estás bien"],
+"sv.hub":["Stazione affollata","Crowded station","Людный вокзал","Estación abarrotada"],
+"sv.hubS":["Qui la richiesta è più alta del solito","Demand here is higher than usual","Здесь спрос выше обычного","Aquí la demanda es mayor de lo normal"],
+/* cronaca */
+"l.start1":["Arrivi in città con {M} in tasca e un debito di {M2} con lo Strozzino.","You arrive in town with {M} and owe the loan shark {M2}.","Вы приехали в город с {M} в кармане и долгом ростовщику {M2}.","Llegas a la ciudad con {M} y debes {M2} al usurero."],
+"l.start2":["Compra basso, vendi alto, apri piazze e attività. Hai {n} notti.","Buy low, sell high, open corners and businesses. You have {n} nights.","Покупай дёшево, продавай дорого, открывай точки и бизнес. У вас {n} ночей.","Compra barato, vende caro, abre puntos y negocios. Tienes {n} noches."],
+"l.bought":["Comprate {q} dosi di {P} a {M}.","Bought {q} {P} at {M}.","Куплено {q} доз «{P}» по {M}.","Compradas {q} dosis de {P} a {M}."],
+"l.sold":["Vendute {q} dosi di {P} a {M}.","Sold {q} {P} at {M}.","Продано {q} доз «{P}» по {M}.","Vendidas {q} dosis de {P} a {M}."],
+"l.travel":["Ti sposti a {Z}.","You move to {Z}.","Вы переехали в {Z}.","Te mueves a {Z}."],
+"l.wait":["Passi la notte a {Z}.","You spend the night in {Z}.","Вы провели ночь в {Z}.","Pasas la noche en {Z}."],
+"l.crash":["Un carico di {P} è arrivato a {Z}: prezzi crollati e magazzini pieni!","A shipment of {P} hit {Z}: prices crashed, plenty in stock!","В {Z} пришла партия «{P}»: цены рухнули, товара много!","Llegó un cargamento de {P} a {Z}: ¡precios por los suelos y mucho stock!"],
+"l.spike":["A {Z} non si trova più {P}: i clienti pagano qualsiasi cifra!","{P} dried up in {Z}: buyers will pay anything!","В {Z} кончился «{P}»: клиенты платят любые деньги!","En {Z} no queda {P}: ¡pagan lo que sea!"],
+"l.unpaid":["Non hai pagato la ciurma a {Z}: {n} pusher se ne vanno.","You couldn't pay your crew in {Z}: {n} dealers quit.","Не заплатили людям в {Z}: ушло дилеров: {n}.","No pagaste a tu gente en {Z}: se van {n} camellos."],
+"l.raid":["RETATA a {Z}! Sequestrate {q} dosi, arrestati {n} pusher.","RAID in {Z}! {q} units seized, {n} dealers arrested.","ОБЛАВА в {Z}! Изъято {q} доз, арестовано {n}.","¡REDADA en {Z}! {q} dosis incautadas, {n} detenidos."],
+"l.closed":["La piazza di {Z} è chiusa.","The {Z} corner is shut down.","Точка в {Z} закрыта.","El punto de {Z} ha cerrado."],
+"l.earn":["La piazza di {Z} ha incassato {M}.","The {Z} corner made {M}.","Точка в {Z} принесла {M}.","El punto de {Z} ganó {M}."],
+"l.escaped":["Sei scappato per i vicoli.","You escaped through the alleys.","Вы скрылись в переулках.","Escapaste por los callejones."],
+"l.caught":["Ti prendono: perdi {q} dosi e {n} di salute.","They catch you: you lose {q} units and {n} health.","Вас поймали: потеряно {q} доз и {n} здоровья.","Te pillan: pierdes {q} dosis y {n} de salud."],
+"l.bribed":["Paghi {M} e l'agente guarda altrove.","You pay {M} and the cop looks away.","Вы платите {M}, и полицейский отворачивается.","Pagas {M} y el agente mira hacia otro lado."],
+"l.fightW":["Hai avuto la meglio e raccogli {M}, ma ora tutta la città ti cerca.","You win and grab {M}, but now the whole city is looking for you.","Вы победили и забрали {M}, но теперь вас ищет весь город.","Ganas y te llevas {M}, pero ahora te busca toda la ciudad."],
+"l.fightL":["Scontro perso: ferito ({n}), sequestrata tutta la roba.","Fight lost: wounded ({n}), all stock seized.","Бой проигран: ранение ({n}), весь товар изъят.","Pelea perdida: herido ({n}), te quitan todo."],
+"l.robbed":["Ti hanno rapinato {M}.","You were robbed of {M}.","Вас ограбили на {M}.","Te robaron {M}."],
+"l.repelled":["Li hai messi in fuga.","You chased them off.","Вы их прогнали.","Los ahuyentaste."],
+"l.beaten":["Ti hanno pestato ({n}) e preso {M}.","They beat you up ({n}) and took {M}.","Вас избили ({n}) и забрали {M}.","Te dieron una paliza ({n}) y se llevaron {M}."],
+"l.found":["Trovate {q} dosi di {P}.","Found {q} {P}.","Найдено {q} доз «{P}».","Encontradas {q} dosis de {P}."],
+"l.sharkPaid":["Hai dato un acconto di {M} allo Strozzino.","You paid the loan shark {M}.","Вы отдали ростовщику {M}.","Pagaste {M} al usurero."],
+"l.sharkHurt":["Lo Strozzino ti manda un messaggio: {n} di salute in meno.","The loan shark sends a message: {n} health lost.","Ростовщик передал привет: −{n} здоровья.","El usurero te manda un mensaje: {n} de salud menos."],
+"l.defended":["La piazza di {Z} resta tua.","The {Z} corner stays yours.","Точка в {Z} осталась за вами.","El punto de {Z} sigue siendo tuyo."],
+"l.lostSpot":["Hai perso la piazza di {Z} con tutta la roba.","You lost the {Z} corner and its stock.","Вы потеряли точку в {Z} вместе с товаром.","Perdiste el punto de {Z} con todo."],
+"l.peace":["Paghi {M} ai rivali per stare tranquillo.","You pay rivals {M} for peace.","Вы заплатили конкурентам {M} за мир.","Pagas {M} a los rivales por la paz."],
+"l.ceded":["Hai ceduto la piazza di {Z} e recuperato la roba.","You gave up {Z} and kept the stock.","Вы уступили точку в {Z} и забрали товар.","Cediste {Z} y recuperaste la mercancía."],
+"l.sting":["Era un infiltrato! Soldi persi e polizia in allerta.","It was a sting! Money lost and police on alert.","Это была подстава! Деньги потеряны, полиция настороже.","¡Era un infiltrado! Dinero perdido y policía alerta."],
+"l.deal":["Affare fatto: {q} dosi di {P}.","Deal done: {q} {P}.","Сделка: {q} доз «{P}».","Trato hecho: {q} dosis de {P}."],
+"l.end":["Fine delle notti. Patrimonio netto: {M}.","The nights are over. Net worth: {M}.","Ночи закончились. Капитал: {M}.","Se acabaron las noches. Patrimonio: {M}."],
+"l.dead":["La tua carriera finisce qui. Patrimonio netto: {M}.","Your career ends here. Net worth: {M}.","Ваша карьера окончена. Капитал: {M}.","Tu carrera termina aquí. Patrimonio: {M}."],
+"l.opened":["Hai aperto una piazza a {Z}.","You opened a corner in {Z}.","Вы открыли точку в {Z}.","Abriste un punto en {Z}."],
+"l.repaid":["Restituiti {M} allo Strozzino.","Repaid {M} to the loan shark.","Возвращено ростовщику {M}.","Devueltos {M} al usurero."],
+"l.borrowed":["Prestito di {M} dallo Strozzino.","Borrowed {M} from the loan shark.","Взято в долг {M}.","Préstamo de {M} del usurero."],
+"l.dep":["Depositati {M}.","Deposited {M}.","Внесено {M}.","Depositados {M}."],
+"l.wd":["Prelevati {M}.","Withdrew {M}.","Снято {M}.","Retirados {M}."],
+"l.law":["L'avvocato ha sistemato un paio di faccende.","The lawyer made a few problems go away.","Адвокат уладил пару дел.","El abogado arregló un par de asuntos."],
+"l.gun":["Hai comprato un'arma.","You bought a gun.","Вы купили оружие.","Compraste un arma."],
+"l.healed":["Il medico ti rimette in sesto.","The doctor patches you up.","Врач поставил вас на ноги.","El médico te deja como nuevo."],
+"l.left":["Lasci {q} dosi alla piazza di {Z}.","You drop {q} units at the {Z} corner.","Оставлено {q} доз на точке в {Z}.","Dejas {q} dosis en el punto de {Z}."],
+"l.took":["Riprendi {q} dosi dalla piazza.","You take {q} units back.","Забрано {q} доз с точки.","Recoges {q} dosis del punto."],
+"l.hired":["Nuovo pusher alla piazza di {Z}.","New dealer at the {Z} corner.","Новый дилер на точке в {Z}.","Nuevo camello en el punto de {Z}."],
+"l.mDone":["Missione completata: {M} e {x} XP.","Mission complete: {M} and {x} XP.","Задание выполнено: {M} и {x} XP.","Misión completada: {M} y {x} XP."],
+"l.mFail":["Missione scaduta: {x} XP persi.","Mission expired: {x} XP lost.","Задание провалено: −{x} XP.","Misión caducada: −{x} XP."],
+"l.mNew":["Un boss ti offre un nuovo contratto.","A boss offers you a new contract.","Босс предлагает новый заказ.","Un jefe te ofrece un nuevo encargo."],
+"l.level":["Sali di livello: ora sei {x}!","Level up: you're now {x}!","Новый уровень: теперь вы {x}!","¡Subes de nivel: ahora eres {x}!"],
+"l.ach":["Traguardo sbloccato: {x}","Achievement unlocked: {x}","Достижение: {x}","Logro desbloqueado: {x}"],
+"l.bizBuy":["Hai comprato: {x}.","You bought: {x}.","Куплено: {x}.","Has comprado: {x}."],
+"l.bizUp":["{x} migliorata al livello {n}.","{x} upgraded to level {n}.","{x}: уровень {n}.","{x} mejorado al nivel {n}."],
+"l.bizInc":["Le attività rendono {M} puliti.","Your businesses bring in {M} clean.","Бизнесы принесли {M} чистыми.","Tus negocios generan {M} limpios."],
+"l.upg":["Potenziamento comprato: {x}.","Upgrade bought: {x}.","Улучшение куплено: {x}.","Mejora comprada: {x}."],
+/* eventi */
+"e.police":["Sirene!","Sirens!","Сирены!","¡Sirenas!"],
+"e.policeT":["{n} agenti ti fermano a {Z}. Hai addosso {q} dosi e {M}.","{n} cops stop you in {Z}. You're carrying {q} units and {M}.","Полицейские ({n}) останавливают вас в {Z}. При вас {q} доз и {M}.","{n} agentes te paran en {Z}. Llevas {q} dosis y {M}."],
+"e.run":["Scappa","Run","Бежать","Huir"],
+"e.bribe":["Corrompi ({M})","Bribe ({M})","Дать взятку ({M})","Sobornar ({M})"],
+"e.fight":["Combatti","Fight","Драться","Pelear"],
+"e.mug":["Rapina","Mugging","Ограбление","Atraco"],
+"e.mugT":["Due tipi ti bloccano in un sottopasso e vogliono il portafoglio.","Two guys corner you in an underpass and want your wallet.","Двое зажали вас в подземном переходе и требуют кошелёк.","Dos tipos te acorralan en un paso subterráneo y quieren tu cartera."],
+"e.give":["Consegna ({M})","Hand it over ({M})","Отдать ({M})","Entregar ({M})"],
+"e.resist":["Reagisci","Fight back","Сопротивляться","Resistir"],
+"e.stash":["Un pacco abbandonato","An abandoned package","Брошенный пакет","Un paquete abandonado"],
+"e.stashT":["Dietro un cassonetto trovi {q} dosi di {P}.","Behind a dumpster you find {q} {P}.","За мусорным баком вы нашли {q} доз «{P}».","Detrás de un contenedor encuentras {q} dosis de {P}."],
+"e.take":["Prendile","Take it","Забрать","Cogerlas"],
+"e.leave":["Lascia stare","Leave it","Оставить","Dejarlo"],
+"e.shark":["Gli uomini dello Strozzino","The loan shark's men","Люди ростовщика","Los hombres del usurero"],
+"e.sharkT":["Due energumeni ti aspettano sotto casa. Vogliono {M} sul debito.","Two heavies wait outside your place. They want {M} on the debt.","Двое громил ждут у дома. Требуют {M} в счёт долга.","Dos matones te esperan en casa. Quieren {M} de la deuda."],
+"e.pay":["Paga {M}","Pay {M}","Заплатить {M}","Pagar {M}"],
+"e.broke":["Non ho soldi","I'm broke","У меня нет денег","No tengo dinero"],
+"e.rival":["Banda rivale","Rival crew","Конкуренты","Banda rival"],
+"e.rivalT":["Una banda vuole prendersi la tua piazza a {Z}.","A gang wants to take your corner in {Z}.","Банда хочет забрать вашу точку в {Z}.","Una banda quiere quedarse con tu punto en {Z}."],
+"e.defend":["Difendila","Defend it","Защищать","Defenderlo"],
+"e.peace":["Paga la pace ({M})","Pay for peace ({M})","Откупиться ({M})","Pagar la paz ({M})"],
+"e.cede":["Cedi la piazza","Give it up","Уступить точку","Ceder el punto"],
+"e.deal":["Affare in un bar","Deal at a bar","Сделка в баре","Trato en un bar"],
+"e.dealT":["Un tizio ti offre {q} dosi di {P} a {M} l'una. Potrebbe essere una trappola.","A guy offers you {q} {P} at {M} each. Could be a trap.","Незнакомец предлагает {q} доз «{P}» по {M}. Может быть ловушка.","Un tipo te ofrece {q} dosis de {P} a {M} cada una. Puede ser una trampa."],
+"e.accept":["Accetta ({M})","Accept ({M})","Согласиться ({M})","Aceptar ({M})"],
+"e.refuse":["Rifiuta","Refuse","Отказаться","Rechazar"],
+"e.lvl":["Nuovo grado","Promotion","Повышение","Ascenso"],
+"e.lvlT":["La strada ora ti conosce come {x}. Livello {n}.","The street now knows you as {x}. Level {n}.","Улица теперь знает вас как «{x}». Уровень {n}.","La calle ahora te conoce como {x}. Nivel {n}."],
+"e.ok":["Avanti","Continue","Дальше","Seguir"],
+"tut.next":["Avanti","Next","Далее","Siguiente"],
+"tut.back":["Indietro","Back","Назад","Atrás"],
+"tut.skip":["Salta tutorial","Skip tutorial","Пропустить обучение","Saltar tutorial"],
+"tut.go":["Inizia a giocare","Start playing","Начать игру","Empezar a jugar"],
+"tut.step":["GUIDA {a} / {b}","GUIDE {a} / {b}","ОБУЧЕНИЕ {a} / {b}","GUÍA {a} / {b}"],
+/* fine */
+"r.dead":["Finito in ospedale","Ended up in hospital","Попал в больницу","Acabaste en el hospital"],
+"r.king":["Il Re della città","King of the city","Король города","Rey de la ciudad"],
+"r.boss":["Boss di quartiere","Neighborhood boss","Босс района","Jefe de barrio"],
+"r.cap":["Capopiazza","Corner boss","Хозяин точки","Jefe de punto"],
+"r.street":["Pusher di strada","Street dealer","Уличный дилер","Camello de calle"],
+"r.sunk":["Sommerso dai debiti","Drowning in debt","Утонул в долгах","Ahogado en deudas"],
+"end.final":["Patrimonio netto finale","Final net worth","Итоговый капитал","Patrimonio final"],
+"end.detail":["Contanti {M} · Banca {M2} · Debito {M3}","Cash {M} · Bank {M2} · Debt {M3}","Наличные {M} · Банк {M2} · Долг {M3}","Efectivo {M} · Banco {M2} · Deuda {M3}"],
+"end.record":["Nuovo record!","New best score!","Новый рекорд!","¡Nuevo récord!"],
+"end.again":["Gioca ancora","Play again","Играть снова","Jugar otra vez"],
+"end.menu":["Menu principale","Main menu","Главное меню","Menú principal"],
+};
+const PNAMES={nebbia:["Nebbia","Fog","Туман","Niebla"],brace:["Brace","Ember","Жар","Brasa"],eco:["Eco","Echo","Эхо","Eco"],lampo:["Lampo","Flash","Вспышка","Relámpago"],vetro:["Vetro Blu","Blue Glass","Синее стекло","Cristal Azul"],zaffiro:["Zaffiro","Sapphire","Сапфир","Zafiro"]};
+const PDESC={nebbia:["roba da studenti, poco valore","student stuff, low value","для студентов, дёшево","cosa de estudiantes, poco valor"],brace:["si vende ovunque","sells everywhere","продаётся везде","se vende en todas partes"],eco:["va forte nei locali","big in the clubs","популярно в клубах","triunfa en los clubes"],lampo:["prezzo nervoso","jumpy price","цена скачет","precio nervioso"],vetro:["raro, margini alti","rare, high margins","редкое, высокая маржа","raro, márgenes altos"],zaffiro:["roba da grossisti","wholesale only","для оптовиков","para mayoristas"]};
+const ZNAMES={stazione:["Stazione","Station","Вокзал","Estación"],porto:["Porto","Docks","Порт","Puerto"],nord:["Quartiere Nord","North Side","Северный район","Barrio Norte"],centro:["Centro Storico","Old Town","Старый город","Casco Antiguo"],sud:["Periferia Sud","South End","Южная окраина","Periferia Sur"],uni:["Università","University","Университет","Universidad"]};
+const ZHINT={stazione:["Tanto passaggio, più richiesta","Busy hub, higher demand","Людно, высокий спрос","Mucho tránsito, más demanda"],porto:["Lo Strozzino","The loan shark","Ростовщик","El usurero"],nord:["Medico, poca polizia","Doctor, few cops","Врач, мало полиции","Médico, poca policía"],centro:["Banca e avvocato, tanta polizia","Bank and lawyer, lots of cops","Банк и адвокат, много полиции","Banco y abogado, mucha policía"],sud:["L'armiere","The arms dealer","Оружейник","El armero"],uni:["Medico, clienti giovani","Doctor, young buyers","Врач, молодые клиенты","Médico, clientes jóvenes"]};
+const BAGS=[
+ {cap:100,cost:0,n:["Zaino scolastico","School backpack","Школьный рюкзак","Mochila escolar"]},
+ {cap:150,cost:1500,n:["Zaino da trekking","Hiking pack","Туристический рюкзак","Mochila de montaña"]},
+ {cap:220,cost:4000,n:["Borsone sportivo","Gym duffel","Спортивная сумка","Bolsa de deporte"]},
+ {cap:320,cost:10000,n:["Valigia a doppio fondo","False-bottom suitcase","Чемодан с двойным дном","Maleta de doble fondo"]},
+ {cap:450,cost:25000,n:["Furgoncino","Small van","Фургончик","Furgoneta"]},
+ {cap:650,cost:60000,n:["Camion frigo","Refrigerated truck","Рефрижератор","Camión frigorífico"]}];
+const UPGS=[
+ {id:'shoes',cost:2500,n:["Scarpe da corsa","Running shoes","Кроссовки","Zapatillas de correr"],d:["+15% di fuga dalla polizia","+15% chance to escape police","+15% к побегу от полиции","+15% de huir de la policía"]},
+ {id:'vest',cost:6000,n:["Giubbotto antiproiettile","Bulletproof vest","Бронежилет","Chaleco antibalas"],d:["−40% danni subiti","−40% damage taken","−40% получаемого урона","−40% de daño recibido"]},
+ {id:'phone',cost:8000,n:["Telefono criptato","Encrypted phone","Шифрованный телефон","Teléfono cifrado"],d:["−30% attenzione della polizia","−30% police heat gained","−30% к росту розыска","−30% de atención policial"]},
+ {id:'informant',cost:12000,n:["Rete di informatori","Informant network","Сеть информаторов","Red de informantes"],d:["Vedi in quale zona ogni roba si vende meglio","See which zone pays most for each product","Показывает, где каждый товар дороже всего","Ves qué zona paga más por cada cosa"]},
+ {id:'car',cost:15000,n:["Auto pulita","Clean car","Чистая машина","Coche limpio"],d:["−20% controlli e rapine in viaggio","−20% stops and muggings on the road","−20% проверок и ограблений в пути","−20% controles y atracos en ruta"]}];
+const BIZ=[
+ {id:'carwash',lvl:1,cost:8000,inc:350,heat:1,n:["Autolavaggio","Car wash","Автомойка","Lavadero de coches"]},
+ {id:'bar',lvl:2,cost:15000,inc:700,heat:0,n:["Bar dello sport","Sports bar","Спорт-бар","Bar deportivo"]},
+ {id:'laundry',lvl:3,cost:28000,inc:1200,heat:2,n:["Lavanderia","Laundromat","Прачечная","Lavandería"]},
+ {id:'pizzeria',lvl:4,cost:45000,inc:1900,heat:0,n:["Pizzeria","Pizzeria","Пиццерия","Pizzería"]},
+ {id:'club',lvl:5,cost:90000,inc:3900,heat:0,n:["Discoteca","Nightclub","Ночной клуб","Discoteca"]},
+ {id:'hotel',lvl:6,cost:180000,inc:7800,heat:2,n:["Hotel","Hotel","Отель","Hotel"]},
+ {id:'dealer',lvl:7,cost:400000,inc:17000,heat:1,n:["Concessionaria","Car dealership","Автосалон","Concesionario"]}];
+const LEVELS=[["Nessuno","Nobody","Никто","Nadie"],["Corriere","Runner","Курьер","Mensajero"],["Pusher","Dealer","Дилер","Camello"],["Capopiazza","Corner boss","Хозяин точки","Jefe de punto"],["Luogotenente","Lieutenant","Лейтенант","Lugarteniente"],["Boss","Boss","Босс","Jefe"],["Padrino","Godfather","Крёстный отец","Padrino"],["Re del Cartello","Cartel King","Король картеля","Rey del Cártel"]];
+const ACH=[
+ {id:'first',c:s=>s.stats.units>=1,n:["Primo affare","First deal","Первая сделка","Primer trato"],d:["Vendi qualcosa","Sell anything","Продайте что-нибудь","Vende algo"]},
+ {id:'k100',c:s=>netWorth(s)>=100000,n:["Sei cifre","Six figures","Шестизначная сумма","Seis cifras"],d:["Patrimonio di $100.000","Reach $100,000 net worth","Капитал $100 000","Patrimonio de $100.000"]},
+ {id:'spots3',c:s=>Object.keys(s.spots).length>=3,n:["Tre piazze","Three corners","Три точки","Tres puntos"],d:["Gestisci 3 piazze insieme","Run 3 corners at once","Держите 3 точки сразу","Gestiona 3 puntos a la vez"]},
+ {id:'debtfree',c:s=>s.debt<=0,n:["Libero","Debt free","Без долгов","Sin deudas"],d:["Estingui il debito","Pay off the loan shark","Погасите долг","Paga al usurero"]},
+ {id:'biz3',c:s=>Object.keys(s.biz).length>=3,n:["Imprenditore","Entrepreneur","Предприниматель","Empresario"],d:["Possiedi 3 attività","Own 3 businesses","Владейте 3 бизнесами","Ten 3 negocios"]},
+ {id:'mis5',c:s=>s.stats.missions>=5,n:["Affidabile","Reliable","Надёжный","De confianza"],d:["Completa 5 missioni","Complete 5 missions","Выполните 5 заданий","Completa 5 misiones"]},
+ {id:'fighter',c:s=>s.stats.fights>=1,n:["Duro","Tough","Крепкий","Duro"],d:["Vinci uno scontro con la polizia","Win a fight with the police","Победите в драке с полицией","Gana una pelea con la policía"]},
+ {id:'lvl5',c:s=>levelOf(s.xp)>=5,n:["Ai vertici","Moving up","На вершине","En la cima"],d:["Raggiungi il livello 5","Reach level 5","Достигните 5 уровня","Llega al nivel 5"]},
+ {id:'truck',c:s=>s.bag>=BAGS.length-1,n:["Logistica","Logistics","Логистика","Logística"],d:["Compra il camion frigo","Buy the refrigerated truck","Купите рефрижератор","Compra el camión frigorífico"]},
+ {id:'million',c:s=>netWorth(s)>=1000000,n:["Milionario","Millionaire","Миллионер","Millonario"],d:["Patrimonio di $1.000.000","Reach $1,000,000 net worth","Капитал $1 000 000","Patrimonio de $1.000.000"]}];
+
+/* ================= DATI ================= */
+const PRODUCTS=[
+  {id:'nebbia',min:15,max:70,sup:[60,200]},{id:'brace',min:60,max:220,sup:[40,140]},{id:'eco',min:250,max:800,sup:[20,80]},
+  {id:'lampo',min:700,max:2200,sup:[10,45]},{id:'vetro',min:2500,max:6500,sup:[4,20]},{id:'zaffiro',min:8000,max:20000,sup:[1,8]}];
+const ZONES=[
+  {id:'stazione',svc:['hub'],risk:1.1,dem:1.5},{id:'porto',svc:['strozzino'],risk:1.0,dem:1},
+  {id:'nord',svc:['ospedale'],risk:.75,dem:1},{id:'centro',svc:['banca','avvocato'],risk:1.45,dem:1.1},
+  {id:'sud',svc:['armi'],risk:.85,dem:1},{id:'uni',svc:['ospedale'],risk:.95,dem:1.2}];
+const DIFF={easy:{cash:4000,debt:5000,rate:5,heat:.8},normal:{cash:2500,debt:6000,rate:7,heat:1},hard:{cash:1500,debt:8000,rate:9,heat:1.25}};
+const SPOT_COST=4000,DEALER_COST=500,DEALER_PAY=120;
+const KEY_SAVE='cartel_save_v2',KEY_SET='cartel_settings_v1',KEY_BEST='cartel_best_v1',KEY_TUT='cartel_tutorial_v1';
+
+const $=id=>document.getElementById(id);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+const ri=(a,b)=>Math.floor(rnd(a,b+1));
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const P=Object.fromEntries(PRODUCTS.map(p=>[p.id,p]));
+const Zd=Object.fromEntries(ZONES.map(z=>[z.id,z]));
+
+/* ================= IMPOSTAZIONI ================= */
+let SET={lang:'it',fps:60,showFps:false,anim:true,diff:'normal',len:60};
+function store(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
+function load(k){try{const v=localStorage.getItem(k);return v?JSON.parse(v):null}catch(e){return null}}
+function del(k){try{localStorage.removeItem(k)}catch(e){}}
+const li=()=>Math.max(0,LANGS.findIndex(l=>l[0]===SET.lang));
+const locale=()=>LANGS[li()][2];
+const money=n=>'$ '+Math.round(n).toLocaleString(locale());
+const pn=id=>PNAMES[id][li()], zn=id=>ZNAMES[id][li()], tr=a=>a[li()];
+function t(k,p){
+  const row=L[k];let s=row?(row[li()]||row[0]):k;
+  if(p)s=s.replace(/\{(\w+)\}/g,(m,x)=>{
+    const v=p[x];if(v===undefined)return m;
+    if(x==='P')return pn(v); if(x==='Z')return zn(v); if(x[0]==='M')return money(v);
+    return v;});
+  return s;
+}
+function applyStatic(){document.documentElement.lang=SET.lang;document.querySelectorAll('[data-t]').forEach(el=>el.textContent=t(el.dataset.t))}
+
+/* ================= PROGRESSI ================= */
+const xpNeed=l=>Math.round(150*Math.pow(l-1,1.7)); // xp totali per raggiungere il livello l
+function levelOf(xp){let l=1;while(l<LEVELS.length&&xp>=xpNeed(l+1))l++;return l}
+const lvlName=l=>tr(LEVELS[l-1]);
+
+/* ================= STATO ================= */
+let S=null,screen='menu',tab='spots';
+const invCount=()=>S?Object.values(S.inv).reduce((a,b)=>a+b,0):0;
+const cap=()=>BAGS[S.bag].cap;
+const avgPrice=id=>(P[id].min+P[id].max)/2;
+const has=u=>!!(S&&S.upg[u]);
+function netWorth(st=S){
+  let g=0;Object.entries(st.inv).forEach(([k,q])=>g+=q*avgPrice(k));
+  Object.values(st.spots).forEach(s=>Object.entries(s.stock).forEach(([k,q])=>g+=q*avgPrice(k)*.8));
+  Object.entries(st.biz||{}).forEach(([id,lv])=>{const b=BIZ.find(x=>x.id===id);let inv=0;for(let i=0;i<lv;i++)inv+=b.cost*Math.pow(1.6,i);g+=inv*.6});
+  return st.cash+st.bank-st.debt+g;
+}
+function log(k,p,c=''){S.log.unshift({d:S.day,k,p:p||{},c});S.log=S.log.slice(0,100)}
+function save(){if(S)store(KEY_SAVE,S)}
+function addXp(n){
+  const before=levelOf(S.xp);S.xp=Math.max(0,Math.round(S.xp+n));const after=levelOf(S.xp);
+  if(after>before){log('l.level',{x:lvlName(after)},'a');queue.push(()=>modal(t('e.lvl'),esc(t('e.lvlT',{x:lvlName(after),n:after})),[{label:t('e.ok'),cls:'primary',fn:nextEvent}]))}
+}
+
+function newGame(){
+  const d=DIFF[SET.diff]||DIFF.normal;
+  const zmul={};ZONES.forEach(z=>{zmul[z.id]={};PRODUCTS.forEach(p=>zmul[z.id][p.id]=rnd(.8,1.25))});
+  S={day:1,maxDays:SET.len,cash:d.cash,debt:d.debt,rate:d.rate,heatMul:d.heat,diff:SET.diff,bank:0,health:100,heat:10,bag:0,zone:'stazione',
+     inv:{},cost:{},prices:{},prev:{},supply:{},demand:{},zmul,guns:0,lawyer:0,spots:{},biz:{},upg:{},missions:[],ach:{},xp:0,
+     stats:{revenue:0,units:0,missions:0,raids:0,escapes:0,fights:0,bizInc:0},log:[],over:false};
+  rollMarket();
+  log('l.start1',{M:d.cash,M2:d.debt},'a');log('l.start2',{n:S.maxDays},'a');
+  S.missions.push(genMission(),genMission());
+  queue=[];tab='spots';save();show('game');
+  if(!load(KEY_TUT))startTutorial();
+}
+function rollMarket(){
+  S.prev=S.prices;S.prices={};S.supply={};S.demand={};
+  ZONES.forEach(z=>{S.prices[z.id]={};S.supply[z.id]={};S.demand[z.id]={};
+    PRODUCTS.forEach(p=>{
+      if(Math.random()<.18){S.prices[z.id][p.id]=null;S.supply[z.id][p.id]=0;S.demand[z.id][p.id]=0;return}
+      S.prices[z.id][p.id]=Math.round(rnd(p.min,p.max)*S.zmul[z.id][p.id]);
+      S.supply[z.id][p.id]=ri(p.sup[0],p.sup[1]);
+      S.demand[z.id][p.id]=Math.round(ri(p.sup[0],p.sup[1])*rnd(.7,1.2)*z.dem);
+    })});
+}
+function heatUp(n){S.heat=clamp(S.heat+Math.round(n*S.heatMul*(has('phone')?.7:1)),0,100)}
+function hurt(n){const d=Math.round(n*(has('vest')?.6:1));S.health-=d;return d}
+
+/* ================= MISSIONI ================= */
+function genMission(){
+  const lv=levelOf(S.xp);const types=['deliver','deliver','sell'];
+  const free=ZONES.filter(z=>!S.spots[z.id]&&!S.missions.some(m=>m.type==='spot'&&m.z===z.id));
+  if(free.length&&Object.keys(S.spots).length<4)types.push('spot');
+  const type=types[ri(0,types.length-1)];
+  const m={id:Date.now()+'-'+ri(0,9999),type,due:S.day+ri(3,7)};
+  if(type==='deliver'){
+    const p=PRODUCTS[ri(0,Math.min(5,1+Math.floor(lv/1.5)))];
+    const zs=ZONES.filter(z=>z.id!==S.zone);m.z=zs[ri(0,zs.length-1)].id;m.p=p.id;
+    m.q=clamp(Math.round(rnd(1500,9000)*(1+lv*.35)/avgPrice(p.id)),2,150);
+    m.reward=Math.round(m.q*avgPrice(p.id)*1.6);m.xp=40+lv*10;
+  }else if(type==='sell'){
+    m.target=Math.round(rnd(5000,20000)*(1+lv*.5)/500)*500;m.base=S.stats.revenue;
+    m.reward=Math.round(m.target*.25);m.xp=50+lv*10;m.due=S.day+ri(4,8);
+  }else{
+    m.z=free[ri(0,free.length-1)].id;m.reward=3000+lv*500;m.xp=60;m.due=S.day+ri(4,7);
+  }
+  return m;
+}
+function missionReady(m){
+  if(m.type==='deliver')return S.zone===m.z&&(S.inv[m.p]||0)>=m.q;
+  if(m.type==='sell')return S.stats.revenue-m.base>=m.target;
+  return !!S.spots[m.z];
+}
+function completeMission(id){
+  const m=S.missions.find(x=>x.id===id);if(!m||!missionReady(m))return;
+  if(m.type==='deliver'){S.inv[m.p]-=m.q;if(!S.inv[m.p]){delete S.inv[m.p];delete S.cost[m.p]}}
+  S.cash+=m.reward;S.stats.missions++;
+  S.missions=S.missions.filter(x=>x.id!==id);
+  log('l.mDone',{M:m.reward,x:m.xp},'g');addXp(m.xp);render();nextEvent();
+}
+
+/* ================= UI HELPERS ================= */
+function toast(msg){const el=$('toast');el.textContent=msg;el.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(()=>el.hidden=true,2200)}
+function modal(title,html,btns,siren){
+  $('mTitle').textContent=title;$('mText').innerHTML=html;
+  const b=$('mBtns');b.innerHTML='';
+  btns.forEach(o=>{const x=document.createElement('button');x.textContent=o.label;if(o.cls)x.className=o.cls;if(o.disabled)x.disabled=true;
+    x.onclick=()=>{$('modal').hidden=true;o.fn&&o.fn();if(screen==='game')render();else renderMenu()};b.appendChild(x)});
+  $('modal').className='modal'+(siren?' siren':'');$('modal').hidden=false;
+  const f=b.querySelector('button:not(:disabled)');f&&f.focus();
+}
+let queue=[];
+function nextEvent(){if(!S||S.over||!$('modal').hidden)return;const e=queue.shift();if(e)e();}
+
+/* ================= SCHERMATE ================= */
+function show(s){
+  screen=s;['menu','settings','game'].forEach(id=>$(id).hidden=id!==s);
+  applyStatic();
+  if(s==='menu')renderMenu();if(s==='settings')renderSettings();if(s==='game')render();
+  window.scrollTo(0,0);
+}
+function renderMenu(){
+  const sv=load(KEY_SAVE);const can=sv&&!sv.over;
+  $('mContinue').disabled=!can;$('mContinue').className=can?'primary':'';$('mNew').className=can?'':'primary';
+  $('saveInfo').textContent=can?t('menu.saveInfo',{d:Math.min(sv.day,sv.maxDays),Z:sv.zone,M:netWorth(sv)}):t('menu.noSave');
+  $('diffInfo').textContent=t('menu.diffInfo',{x:t('diff.'+SET.diff),n:SET.len});
+  $('setInfo').textContent=LANGS[li()][1]+' · '+(SET.fps?SET.fps+' FPS':t('set.unl'));
+  const best=load(KEY_BEST);$('bestInfo').textContent=best?t('menu.best',{M:best}):t('menu.noBest');
+}
+function seg(el,opts,cur,fn){
+  el.innerHTML='';
+  opts.forEach(([v,label])=>{const b=document.createElement('button');b.textContent=label;b.setAttribute('aria-pressed',String(v===cur));
+    b.onclick=()=>{fn(v);store(KEY_SET,SET);applyStatic();renderSettings();applyFpsSettings()};el.appendChild(b)});
+}
+function renderSettings(){
+  seg($('segLang'),LANGS.map(l=>[l[0],l[1]]),SET.lang,v=>SET.lang=v);
+  seg($('segFps'),[[30,'30'],[60,'60'],[120,'120'],[144,'144'],[0,t('set.unl')]],SET.fps,v=>SET.fps=v);
+  seg($('segShow'),[[true,t('set.on')],[false,t('set.off')]],SET.showFps,v=>SET.showFps=v);
+  seg($('segAnim'),[[true,t('set.on')],[false,t('set.off')]],SET.anim,v=>SET.anim=v);
+  seg($('segDiff'),['easy','normal','hard'].map(d=>[d,t('diff.'+d)]),SET.diff,v=>SET.diff=v);
+  seg($('segLen'),[30,60,100].map(n=>[n,t('set.nights',{n})]),SET.len,v=>SET.len=v);
+}
+
+/* ================= COMMERCIO ================= */
+function qtyOf(id){const v=parseInt($('q-'+id).value,10);return isNaN(v)||v<1?0:v}
+function buy(id){
+  const pr=S.prices[S.zone][id];if(!pr||S.over)return;
+  const free=cap()-invCount(),sup=S.supply[S.zone][id],want=qtyOf(id);
+  const q=Math.min(want,free,sup,Math.floor(S.cash/pr));
+  if(q<=0){toast(sup<=0?t('t.supply',{n:0}):free<=0?t('t.full'):t('t.noCash'));return}
+  if(want>sup)toast(t('t.supply',{n:sup}));
+  const old=S.inv[id]||0;
+  S.cost[id]=Math.round(((S.cost[id]||0)*old+pr*q)/(old+q));
+  S.inv[id]=old+q;S.cash-=pr*q;S.supply[S.zone][id]-=q;heatUp(Math.ceil(q*pr/4000));
+  log('l.bought',{q,P:id,M:pr});render();
+}
+function sell(id){
+  const pr=S.prices[S.zone][id];if(!pr||S.over)return;
+  const dem=S.demand[S.zone][id],want=Math.min(qtyOf(id),S.inv[id]||0);
+  const q=Math.min(want,dem);
+  if(want<=0){toast(t('t.noneSell'));return}
+  if(q<=0){toast(t('t.demand',{n:0}));return}
+  if(want>dem)toast(t('t.demand',{n:dem}));
+  const profit=(pr-(S.cost[id]||0))*q;
+  S.inv[id]-=q;if(!S.inv[id]){delete S.inv[id];delete S.cost[id]}
+  S.cash+=pr*q;S.demand[S.zone][id]-=q;S.stats.revenue+=pr*q;S.stats.units+=q;
+  heatUp(Math.ceil(q*pr/3000));
+  log('l.sold',{q,P:id,M:pr},'g');
+  addXp(Math.max(1,profit/400));
+  render();nextEvent();
+}
+function setMax(id){const pr=S.prices[S.zone][id];$('q-'+id).value=pr?Math.max(0,Math.min(cap()-invCount(),S.supply[S.zone][id],Math.floor(S.cash/pr))):0}
+
+/* ================= NOTTE ================= */
+function advance(dest){
+  if(S.over)return;
+  S.day++;queue=[];
+  if(S.debt>0)S.debt=Math.round(S.debt*(1+S.rate/100));
+  S.bank=Math.round(S.bank*1.01);
+  let cover=0,inc=0;
+  Object.entries(S.biz).forEach(([id,lv])=>{const b=BIZ.find(x=>x.id===id);inc+=b.inc*lv;cover+=b.heat});
+  if(inc){S.cash+=inc;S.stats.bizInc+=inc;log('l.bizInc',{M:inc},'g')}
+  S.heat=clamp(S.heat-7-cover+Object.keys(S.spots).length*2,0,100);
+  rollMarket();runSpots();
+  if(dest){S.zone=dest;log('l.travel',{Z:dest})}else log('l.wait',{Z:S.zone});
+  // missioni
+  S.missions=S.missions.filter(m=>{if(S.day>m.due&&!missionReady(m)){const pen=20;S.xp=Math.max(0,S.xp-pen);log('l.mFail',{x:pen},'b');return false}return true});
+  if(S.missions.length<3&&(S.missions.length===0||Math.random()<.55)){S.missions.push(genMission());log('l.mNew',{},'a')}
+  marketNews();travelEvents();
+  if(S.day>S.maxDays)queue.push(endGame);
+  render();nextEvent();
+}
+function marketNews(){
+  if(Math.random()>=.35)return;
+  const p=PRODUCTS[ri(0,PRODUCTS.length-1)],z=ZONES[ri(0,ZONES.length-1)];
+  if(Math.random()<.5){S.prices[z.id][p.id]=Math.round(p.min*rnd(.25,.5));S.supply[z.id][p.id]=p.sup[1]*3;log('l.crash',{P:p.id,Z:z.id},'g')}
+  else{S.prices[z.id][p.id]=Math.round(p.max*rnd(1.8,3));S.supply[z.id][p.id]=0;S.demand[z.id][p.id]=p.sup[1]*2;log('l.spike',{P:p.id,Z:z.id},'a')}
+}
+function travelEvents(){
+  const z=Zd[S.zone],car=has('car')?.8:1;
+  const cop=clamp((S.heat/100)*.55*z.risk*car+(invCount()>0?.05:0),0,.75);
+  if(Math.random()<cop){queue.push(policeStop);return}
+  const r=Math.random();
+  if(r<.08*car&&S.cash>200)queue.push(mugging);
+  else if(r<.14)queue.push(findStash);
+  else if(r<.20&&S.debt>0&&S.day>8)queue.push(loanShark);
+  else if(r<.26&&Object.keys(S.spots).length)queue.push(rivalCrew);
+  else if(r<.31)queue.push(cheapDeal);
+}
+function runSpots(){
+  Object.entries(S.spots).forEach(([zid,sp])=>{
+    const pay=sp.dealers*DEALER_PAY;
+    if(S.cash>=pay)S.cash-=pay;
+    else{const lost=Math.max(1,sp.dealers-Math.floor(S.cash/DEALER_PAY));S.cash=0;sp.dealers=Math.max(0,sp.dealers-lost);log('l.unpaid',{Z:zid,n:lost},'b')}
+    const raid=.04*Zd[zid].risk+sp.dealers*.01+S.heat/1200-(S.lawyer?.03:0);
+    if(sp.dealers>0&&Math.random()<raid){
+      const q=Object.values(sp.stock).reduce((a,b)=>a+b,0);sp.stock={};
+      const n=Math.ceil(sp.dealers/2);sp.dealers-=n;heatUp(12);S.stats.raids++;
+      log('l.raid',{Z:zid,q,n},'s');
+    }else{
+      let capa=sp.dealers*ri(5,10),earned=0;
+      PRODUCTS.slice().reverse().forEach(p=>{
+        const have=sp.stock[p.id]||0;if(!have||capa<=0)return;
+        const price=S.prices[zid][p.id]||Math.round(avgPrice(p.id)*S.zmul[zid][p.id]);
+        const q=Math.min(have,capa);capa-=q;sp.stock[p.id]-=q;if(!sp.stock[p.id])delete sp.stock[p.id];
+        earned+=Math.round(q*price*.85);S.stats.units+=q;});
+      if(earned){S.cash+=earned;sp.earned+=earned;S.stats.revenue+=earned;addXp(earned/2000);log('l.earn',{Z:zid,M:earned},'g')}
+    }
+    if(sp.dealers<=0){delete S.spots[zid];log('l.closed',{Z:zid},'b')}
+  });
+}
+
+/* ================= EVENTI ================= */
+function loseInv(f){let lost=0;Object.keys(S.inv).forEach(k=>{const q=Math.ceil(S.inv[k]*f);S.inv[k]-=q;lost+=q;if(S.inv[k]<=0){delete S.inv[k];delete S.cost[k]}});return lost}
+function checkDeath(){if(S.health<=0){S.health=0;queue=[endGame]}}
+function policeStop(){
+  const n=ri(1,3)+Math.floor(S.heat/35);
+  const bribe=Math.round(400+S.heat*40+invCount()*15);
+  modal(t('e.police'),esc(t('e.policeT',{n,Z:S.zone,q:invCount(),M:S.cash})),[
+    {label:t('e.run'),cls:'primary',fn:()=>{
+      if(Math.random()<clamp(.65-n*.08+S.health/400+(has('shoes')?.15:0),.15,.92)){log('l.escaped',{},'g');S.stats.escapes++;heatUp(5)}
+      else{const d=hurt(ri(8,25));const q=loseInv(.5);heatUp(10);log('l.caught',{q,n:d},'s');checkDeath()}
+      nextEvent();}},
+    {label:t('e.bribe',{M:bribe}),disabled:S.cash<bribe,fn:()=>{S.cash-=bribe;S.heat=clamp(S.heat-8,0,100);log('l.bribed',{M:bribe},'a');nextEvent()}},
+    {label:t('e.fight'),cls:'danger',disabled:S.guns<1,fn:()=>{
+      if(Math.random()<clamp(.25+S.guns*.18-n*.07,.1,.85)){heatUp(25);const c=ri(200,800)*n;S.cash+=c;S.stats.fights++;log('l.fightW',{M:c},'b');addXp(30)}
+      else{const d=hurt(ri(25,50));loseInv(1);heatUp(20);log('l.fightL',{n:d},'s');checkDeath()}
+      nextEvent();}}],true);
+}
+function mugging(){
+  const take=Math.round(S.cash*rnd(.15,.4));
+  modal(t('e.mug'),esc(t('e.mugT')),[
+    {label:t('e.give',{M:take}),fn:()=>{S.cash-=take;log('l.robbed',{M:take},'b');nextEvent()}},
+    {label:t('e.resist'),cls:'danger',fn:()=>{
+      if(Math.random()<.35+S.guns*.2){log('l.repelled',{},'g');addXp(10)}
+      else{const d=hurt(ri(10,30));S.cash-=take;log('l.beaten',{n:d,M:take},'b');checkDeath()}
+      nextEvent();}}]);
+}
+function findStash(){
+  const p=PRODUCTS[ri(0,3)].id;const q=Math.min(ri(3,12),cap()-invCount());
+  if(q<=0){nextEvent();return}
+  modal(t('e.stash'),esc(t('e.stashT',{q,P:p})),[
+    {label:t('e.take'),cls:'primary',fn:()=>{S.inv[p]=(S.inv[p]||0)+q;S.cost[p]=S.cost[p]||0;log('l.found',{q,P:p},'g');nextEvent()}},
+    {label:t('e.leave'),fn:nextEvent}]);
+}
+function loanShark(){
+  const due=Math.round(S.debt*.25);
+  modal(t('e.shark'),esc(t('e.sharkT',{M:due})),[
+    {label:t('e.pay',{M:due}),cls:'primary',disabled:S.cash<due,fn:()=>{S.cash-=due;S.debt-=due;log('l.sharkPaid',{M:due},'a');nextEvent()}},
+    {label:t('e.broke'),cls:'danger',fn:()=>{const d=hurt(ri(15,35));log('l.sharkHurt',{n:d},'b');checkDeath();nextEvent()}}]);
+}
+function rivalCrew(){
+  const ids=Object.keys(S.spots);const zid=ids[ri(0,ids.length-1)];const sp=S.spots[zid];
+  const cost=1500+sp.dealers*300;
+  modal(t('e.rival'),esc(t('e.rivalT',{Z:zid})),[
+    {label:t('e.defend'),cls:'primary',fn:()=>{
+      if(Math.random()<clamp(.3+sp.dealers*.08+S.guns*.15,.1,.9)){heatUp(8);log('l.defended',{Z:zid},'g');addXp(25)}
+      else{delete S.spots[zid];log('l.lostSpot',{Z:zid},'b')}
+      nextEvent();}},
+    {label:t('e.peace',{M:cost}),disabled:S.cash<cost,fn:()=>{S.cash-=cost;log('l.peace',{M:cost},'a');nextEvent()}},
+    {label:t('e.cede'),fn:()=>{Object.entries(sp.stock).forEach(([k,q])=>{S.inv[k]=(S.inv[k]||0)+q;S.cost[k]=S.cost[k]||0});delete S.spots[zid];log('l.ceded',{Z:zid},'b');nextEvent()}}]);
+}
+function cheapDeal(){
+  const p=PRODUCTS[ri(1,4)];const price=Math.round(p.min*.6);
+  const q=Math.min(ri(5,20),cap()-invCount(),Math.floor(S.cash/price));
+  if(q<=0){nextEvent();return}
+  modal(t('e.deal'),esc(t('e.dealT',{q,P:p.id,M:price})),[
+    {label:t('e.accept',{M:q*price}),cls:'primary',fn:()=>{
+      S.cash-=q*price;
+      if(Math.random()<.2){heatUp(20);log('l.sting',{},'s')}
+      else{const old=S.inv[p.id]||0;S.cost[p.id]=Math.round(((S.cost[p.id]||0)*old+price*q)/(old+q));S.inv[p.id]=old+q;log('l.deal',{q,P:p.id},'g')}
+      nextEvent();}},
+    {label:t('e.refuse'),fn:nextEvent}]);
+}
+function endGame(){
+  S.over=true;
+  const score=Math.round(netWorth()),dead=S.health<=0;
+  const best=load(KEY_BEST)||0,isBest=!dead&&score>best;
+  if(isBest)store(KEY_BEST,score);
+  const rank=dead?'r.dead':score>1000000?'r.king':score>250000?'r.boss':score>60000?'r.cap':score>0?'r.street':'r.sunk';
+  log(dead?'l.dead':'l.end',{M:score},'a');save();
+  modal(t(rank),esc(t('end.final'))+': <b class="num">'+money(score)+'</b><br>'+esc(t('end.detail',{M:S.cash,M2:S.bank,M3:S.debt}))+'<br>'+esc(lvlName(levelOf(S.xp)))+' · Lv '+levelOf(S.xp)+(isBest?'<br><b style="color:var(--sodium)">'+esc(t('end.record'))+'</b>':''),[
+    {label:t('end.again'),cls:'primary',fn:newGame},
+    {label:t('end.menu'),fn:()=>{del(KEY_SAVE);show('menu')}}]);
+}
+
+/* ================= SERVIZI ================= */
+function svcRows(){
+  const z=Zd[S.zone],rows=[];
+  if(!S.spots[S.zone])rows.push({t:t('sv.open'),s:t('sv.openS',{M:SPOT_COST}),b:[{l:t('sv.openB'),cls:'primary',dis:S.cash<SPOT_COST,
+    fn:()=>{S.cash-=SPOT_COST;S.spots[S.zone]={dealers:1,stock:{},earned:0};heatUp(6);log('l.opened',{Z:S.zone},'a');addXp(30)}}]});
+  if(z.svc.includes('hub'))rows.push({t:t('sv.hub'),s:t('sv.hubS'),b:[]});
+  if(z.svc.includes('strozzino'))rows.push({t:t('sv.shark'),s:t('sv.sharkS',{M:S.debt,p:S.rate}),b:[
+    {l:t('sv.repay'),dis:S.debt<=0||S.cash<=0,fn:()=>{const p=Math.min(S.cash,S.debt);S.cash-=p;S.debt-=p;log('l.repaid',{M:p},'a')}},
+    {l:t('sv.borrow',{M:5000}),dis:S.debt>40000,fn:()=>{S.cash+=5000;S.debt+=5000;log('l.borrowed',{M:5000},'b')}}]});
+  if(z.svc.includes('banca'))rows.push({t:t('sv.bank'),s:t('sv.bankS',{M:S.bank}),b:[
+    {l:t('sv.dep'),dis:S.cash<=0,fn:()=>{log('l.dep',{M:S.cash});S.bank+=S.cash;S.cash=0}},
+    {l:t('sv.wd'),dis:S.bank<=0,fn:()=>{log('l.wd',{M:S.bank});S.cash+=S.bank;S.bank=0}}]});
+  if(z.svc.includes('avvocato'))rows.push({t:t('sv.law'),s:t('sv.lawS'),b:[
+    {l:t('sv.pay',{M:3000}),dis:S.cash<3000||S.heat<=0,fn:()=>{S.cash-=3000;S.heat=clamp(S.heat-30,0,100);S.lawyer=1;log('l.law',{},'a')}}]});
+  if(z.svc.includes('armi')){const c=2500+S.guns*1500;
+    rows.push({t:t('sv.arms'),s:t('sv.armsS',{n:S.guns}),b:[{l:t('sv.buy',{M:c}),dis:S.cash<c||S.guns>=3,fn:()=>{S.cash-=c;S.guns++;heatUp(5);log('l.gun',{},'a')}}]})}
+  if(z.svc.includes('ospedale')){const c=(100-S.health)*40;
+    rows.push({t:t('sv.doc'),s:t('sv.docS',{n:S.health}),b:[{l:c?t('sv.heal',{M:c}):t('sv.fit'),dis:!c||S.cash<c,fn:()=>{S.cash-=c;S.health=100;log('l.healed',{},'g')}}]})}
+  return rows;
+}
+
+/* ================= SCHEDE ================= */
+function btn(label,attrs,cls,dis){return '<button '+attrs+(cls?' class="'+cls+'"':'')+(dis?' disabled':'')+'>'+esc(label)+'</button>'}
+function tabSpots(){
+  const ids=Object.keys(S.spots);
+  let h='<h2><span>'+esc(t('tab.spots'))+'</span> <small>'+esc(t('spot.note'))+'</small></h2>';
+  if(!ids.length)return h+'<p class="empty">'+esc(t('spot.empty'))+'</p>';
+  return h+'<div class="list">'+ids.map(zid=>{
+    const sp=S.spots[zid],st=Object.entries(sp.stock),here=zid===S.zone;
+    return '<div class="item"><header><b>'+esc(zn(zid))+'</b><span class="chip">'+esc(t('spot.dealers',{n:sp.dealers}))+'</span></header>'+
+      '<div class="meta">'+esc(t('spot.stock'))+': '+(st.length?st.map(([k,q])=>q+' '+esc(pn(k))).join(', '):esc(t('spot.none')))+' · '+esc(t('spot.earned'))+': <span class="num">'+money(sp.earned)+'</span></div>'+
+      (here?'<div class="acts">'+btn(t('spot.leave'),'data-sp="stock"')+btn(t('spot.take'),'data-sp="take"')+btn(t('spot.hire',{M:DEALER_COST}),'data-sp="hire"','',S.cash<DEALER_COST||sp.dealers>=8||S.over)+'</div>'
+           :'<div class="meta">'+esc(t('spot.go',{Z:zid,M:sp.dealers*DEALER_PAY}))+'</div>')+'</div>';
+  }).join('')+'</div>';
+}
+function tabBiz(){
+  const lv=levelOf(S.xp);let tot=0;Object.entries(S.biz).forEach(([id,l])=>tot+=BIZ.find(b=>b.id===id).inc*l);
+  let h='<h2><span>'+esc(t('tab.biz'))+'</span> <small>'+esc(tot?t('biz.total',{M:tot}):t('biz.note'))+'</small></h2><div class="list">';
+  BIZ.forEach(b=>{
+    const own=S.biz[b.id]||0,locked=lv<b.lvl;
+    const next=own<3?Math.round(b.cost*Math.pow(1.6,own)):0;
+    const info=[t('biz.inc',{M:b.inc*Math.max(own,1)})];if(b.heat)info.push(t('biz.heat',{n:b.heat}));
+    let action='';
+    if(locked)action='<span class="chip lock">'+esc(t('biz.lock',{n:b.lvl}))+'</span>';
+    else if(own>=3)action='<span class="chip">'+esc(t('biz.max'))+'</span>';
+    else action=btn(own?t('biz.up',{M:next}):t('sv.buy',{M:next}),'data-biz="'+b.id+'"',own?'':'primary',S.cash<next||S.over);
+    h+='<div class="item'+(locked?' locked':'')+(own?' done':'')+'"><header><b>'+esc(tr(b.n))+'</b>'+(own?'<span class="chip">'+esc(t('biz.lvl',{n:own}))+'</span>':'')+'</header><div class="meta">'+esc(info.join(' · '))+'</div><div class="acts">'+action+'</div></div>';
+  });
+  return h+'</div>';
+}
+function tabMissions(){
+  let h='<h2><span>'+esc(t('tab.mis'))+'</span> <small>'+esc(t('m.note'))+'</small></h2>';
+  if(!S.missions.length)return h+'<p class="empty">'+esc(t('m.none'))+'</p>';
+  return h+'<div class="list">'+S.missions.map(m=>{
+    const ready=missionReady(m);let title,prog='',act='';
+    if(m.type==='deliver'){title=t('m.deliver',{q:m.q,P:m.p,Z:m.z});const have=Math.min(S.inv[m.p]||0,m.q);
+      prog='<div class="meta">'+esc(pn(m.p))+': '+t('m.progress',{a:have,b:m.q})+'</div><div class="pbar"><i style="width:'+(have/m.q*100)+'%"></i></div>';
+      act=ready?btn(t('m.deliverBtn'),'data-mc="'+m.id+'"','primary'):'<span class="meta">'+esc(t('m.goTo',{Z:m.z}))+'</span>';}
+    else if(m.type==='sell'){title=t('m.sell',{M:m.target});const a=Math.min(S.stats.revenue-m.base,m.target);
+      prog='<div class="meta">'+money(a)+' / '+money(m.target)+'</div><div class="pbar"><i style="width:'+(a/m.target*100)+'%"></i></div>';
+      act=ready?btn(t('m.claim'),'data-mc="'+m.id+'"','primary'):'';}
+    else{title=t('m.spot',{Z:m.z});act=ready?btn(t('m.claim'),'data-mc="'+m.id+'"','primary'):'';}
+    return '<div class="item'+(ready?' done':'')+'"><header><b>'+esc(title)+'</b><span class="chip'+(S.day>=m.due?' lock':'')+'">'+esc(t('m.due',{d:m.due}))+'</span></header>'+
+      '<div class="meta">'+esc(t('m.reward',{M:m.reward,x:m.xp}))+'</div>'+prog+'<div class="acts">'+act+btn(t('m.drop'),'data-md="'+m.id+'"','',S.over)+'</div></div>';
+  }).join('')+'</div>';
+}
+function tabUpg(){
+  let h='<h2><span>'+esc(t('tab.upg'))+'</span> <small>'+esc(t('upg.note'))+'</small></h2><div class="list">';
+  const cur=BAGS[S.bag],nx=BAGS[S.bag+1];
+  h+='<div class="item"><header><b>'+esc(t('upg.bag'))+'</b><span class="chip">'+(S.bag+1)+'/'+BAGS.length+'</span></header><div class="meta">'+esc(t('upg.now',{x:tr(cur.n),n:cur.cap}))+'</div>'+
+    (nx?'<div class="meta">'+esc(t('upg.next',{x:tr(nx.n),n:nx.cap}))+'</div><div class="acts">'+btn(t('sv.buy',{M:nx.cost}),'data-bag="1"','primary',S.cash<nx.cost||S.over)+'</div>':'<div class="meta">'+esc(t('upg.top'))+'</div>')+'</div>';
+  UPGS.forEach(u=>{const own=has(u.id);
+    h+='<div class="item'+(own?' done':'')+'"><header><b>'+esc(tr(u.n))+'</b>'+(own?'<span class="chip">'+esc(t('upg.owned'))+'</span>':'')+'</header><div class="meta">'+esc(tr(u.d))+'</div>'+
+      (own?'':'<div class="acts">'+btn(t('sv.buy',{M:u.cost}),'data-upg="'+u.id+'"','',S.cash<u.cost||S.over)+'</div>')+'</div>';});
+  return h+'</div>';
+}
+function tabProg(){
+  const lv=levelOf(S.xp);
+  let h='<h2><span>'+esc(t('tab.prog'))+'</span> <small>'+esc(lvlName(lv))+' · Lv '+lv+'</small></h2>';
+  h+='<p class="empty" style="margin-bottom:12px">'+esc(lv<LEVELS.length?t('pr.next',{x:lvlName(lv+1),n:xpNeed(lv+1)}):t('pr.max'))+'</p>';
+  h+='<div class="lbl" style="margin-bottom:6px">'+esc(t('pr.stats'))+'</div><div class="kv" style="margin-bottom:14px">'+
+    [[t('pr.sold'),money(S.stats.revenue)],[t('pr.units'),S.stats.units.toLocaleString(locale())],[t('pr.bizInc'),money(S.stats.bizInc)],[t('pr.missions'),S.stats.missions],[t('pr.escapes'),S.stats.escapes],[t('pr.raids'),S.stats.raids]]
+    .map(([k,v])=>'<span>'+esc(k)+'</span><span>'+v+'</span>').join('')+'</div>';
+  const got=ACH.filter(a=>S.ach[a.id]).length;
+  h+='<div class="lbl" style="margin-bottom:6px">'+esc(t('pr.ach',{a:got,b:ACH.length}))+'</div><div class="ach">'+ACH.map(a=>'<div class="'+(S.ach[a.id]?'on':'')+'"><b>'+esc(tr(a.n))+'</b>'+esc(tr(a.d))+'</div>').join('')+'</div>';
+  return h;
+}
+const TABS=[['spots','tab.spots',tabSpots],['biz','tab.biz',tabBiz],['mis','tab.mis',tabMissions],['upg','tab.upg',tabUpg],['prog','tab.prog',tabProg]];
+
+/* ================= RENDER GIOCO ================= */
+function checkAch(){ACH.forEach(a=>{if(!S.ach[a.id]&&a.c(S)){S.ach[a.id]=1;log('l.ach',{x:tr(a.n)},'a');addXp(50)}})}
+function render(){
+  if(!S)return;
+  if(!S.over)checkAch();
+  const lv=levelOf(S.xp),lo=xpNeed(lv),hi=lv<LEVELS.length?xpNeed(lv+1):lo;
+  $('rankLbl').textContent=t('hud.lvl',{n:lv,x:lvlName(lv),a:S.xp,b:hi});
+  $('xpFill').style.width=(hi>lo?(S.xp-lo)/(hi-lo)*100:100)+'%';
+  $('zoneName').textContent=zn(S.zone);
+  $('dayLbl').textContent=t('hud.night',{d:Math.min(S.day,S.maxDays),n:S.maxDays});
+  const hc=S.heat>66?'var(--bad)':S.heat>33?'var(--sodium)':'var(--good)';
+  const pc=S.health<35?'var(--bad)':S.health<70?'var(--sodium)':'var(--good)';
+  $('stats').innerHTML=[
+    [t('st.cash'),money(S.cash)],[t('st.bank'),money(S.bank)],
+    [t('st.debt'),'<span style="color:'+(S.debt?'var(--bad)':'var(--good)')+'">'+money(S.debt)+'</span>'],
+    [t('st.worth'),money(netWorth())],
+    [t('st.health'),S.health+'/100','<div class="meter"><i style="width:'+S.health+'%;background:'+pc+'"></i></div>'],
+    [t('st.heat'),S.heat+'%','<div class="meter"><i style="width:'+S.heat+'%;background:'+hc+'"></i></div>'],
+  ].map(([k,v,x])=>'<div class="stat"><div class="lbl">'+esc(k)+'</div><div class="v">'+v+'</div>'+(x||'')+'</div>').join('');
+
+  const pr=S.prices[S.zone],pv=S.prev[S.zone]||{},sup=S.supply[S.zone],dem=S.demand[S.zone];
+  $('mktNote').textContent=ZHINT[S.zone][li()];
+  $('mkt').innerHTML=PRODUCTS.map(p=>{
+    const v=pr[p.id],old=pv[p.id],have=S.inv[p.id]||0,cost=S.cost[p.id];
+    let trd='';if(v&&old)trd=v>old*1.05?' <span class="trend-up">▲</span>':v<old*.95?' <span class="trend-down">▼</span>':'';
+    let g='';if(v&&have&&cost){const d=v-cost;g=' <span class="'+(d>=0?'trend-up':'trend-down')+'">'+(d>=0?'+':'')+Math.round(d/Math.max(cost,1)*100)+'%</span>'}
+    let info='';
+    if(has('informant')){let bz=null,bp=0;ZONES.forEach(z=>{const x=S.prices[z.id][p.id];if(x&&x>bp){bp=x;bz=z.id}});if(bz)info='<em>'+esc(t('inf.best',{Z:bz,M:bp}))+'</em>'}
+    const off=!v||S.over;
+    const sp=sup[p.id],dm=dem[p.id];
+    return '<tr><td class="prod"><b>'+esc(pn(p.id))+'</b><span>'+esc(PDESC[p.id][li()])+'</span>'+info+'</td>'+
+      '<td class="num">'+(v?money(v)+trd:'<span class="na">'+esc(t('na'))+'</span>')+'</td>'+
+      '<td class="num'+(v&&sp<=5?' low':'')+'">'+(v?sp:'—')+'</td>'+
+      '<td class="num'+(v&&dm<=5?' low':'')+'">'+(v?dm:'—')+'</td>'+
+      '<td class="num">'+(have||'—')+'</td>'+
+      '<td class="num">'+(have&&cost?money(cost)+g:'—')+'</td>'+
+      '<td><div class="acts"><input type="number" min="0" id="q-'+p.id+'" value="'+(have||'')+'" aria-label="'+esc(t('th.qty')+' '+pn(p.id))+'">'+
+      btn(t('b.max'),'data-a="m" data-p="'+p.id+'"','',off||!sp)+
+      btn(t('b.buy'),'data-a="b" data-p="'+p.id+'"','primary',off||!sp)+
+      btn(t('b.sell'),'data-a="s" data-p="'+p.id+'"','',off||!have||!dm)+'</div></td></tr>';
+  }).join('');
+
+  $('travel').innerHTML=ZONES.map(z=>{
+    const mark=(S.spots[z.id]?'● ':'')+(S.missions.some(m=>m.z===z.id&&m.type==='deliver')?'★ ':'');
+    return '<button data-go="'+z.id+'" class="'+(z.id===S.zone?'here':'')+'"'+(z.id===S.zone||S.over?' disabled':'')+'><b>'+esc(zn(z.id))+'</b><span>'+mark+esc(ZHINT[z.id][li()])+'</span></button>'}).join('');
+  $('waitBtn').disabled=S.over;
+
+  const n=invCount();
+  $('capLbl').textContent=t('cap',{n,c:cap()})+' · '+tr(BAGS[S.bag].n)+(S.guns?' · '+t('guns',{n:S.guns}):'');
+  $('inv').innerHTML=n?Object.entries(S.inv).map(([k,q])=>'<div><span>'+esc(pn(k))+'</span><span class="num">'+q+'</span></div>').join(''):'<p class="empty">'+esc(t('emptyInv'))+'</p>';
+
+  const readyAny=S.missions.some(missionReady);
+  $('tabs').innerHTML=TABS.map(([id,k])=>'<button role="tab" data-tab="'+id+'" aria-selected="'+(tab===id)+'">'+esc(t(k))+(id==='mis'&&readyAny?'<span class="dot"></span>':'')+'</button>').join('');
+  $('tabBody').innerHTML=TABS.find(x=>x[0]===tab)[2]();
+
+  $('svcNote').textContent=zn(S.zone);
+  const svc=$('svc');svc.innerHTML='';
+  svcRows().forEach(r=>{
+    const d=document.createElement('div');d.className='row';
+    d.innerHTML='<div><b>'+esc(r.t)+'</b><small>'+esc(r.s)+'</small></div>';
+    const a=document.createElement('div');a.className='acts';
+    r.b.forEach(b=>{const x=document.createElement('button');x.textContent=b.l;if(b.cls)x.className=b.cls;x.disabled=!!b.dis||S.over;x.onclick=()=>{b.fn();render();nextEvent()};a.appendChild(x)});
+    d.appendChild(a);svc.appendChild(d);
+  });
+
+  $('log').innerHTML=S.log.map(l=>'<p class="'+l.c+'"><span class="d">'+String(Math.min(l.d,S.maxDays)).padStart(2,'0')+'</span>'+esc(t(l.k,l.p))+'</p>').join('');
+  save();
+}
+
+/* ================= EVENTI UI ================= */
+document.addEventListener('click',e=>{
+  const b=e.target.closest('button');if(!b||screen!=='game'||!S||b.disabled)return;
+  const d=b.dataset;
+  if(d.a){if(d.a==='b')buy(d.p);else if(d.a==='s')sell(d.p);else setMax(d.p);return}
+  if(d.go){advance(d.go);return}
+  if(d.tab){tab=d.tab;render();return}
+  if(d.mc){completeMission(d.mc);return}
+  if(d.md){S.missions=S.missions.filter(m=>m.id!==d.md);render();return}
+  if(d.bag){const nx=BAGS[S.bag+1];if(nx&&S.cash>=nx.cost){S.cash-=nx.cost;S.bag++;log('l.upg',{x:tr(nx.n)},'a');addXp(20)}render();nextEvent();return}
+  if(d.upg){const u=UPGS.find(x=>x.id===d.upg);if(u&&!has(u.id)&&S.cash>=u.cost){S.cash-=u.cost;S.upg[u.id]=1;log('l.upg',{x:tr(u.n)},'a');addXp(20)}render();nextEvent();return}
+  if(d.biz){const bz=BIZ.find(x=>x.id===d.biz),own=S.biz[bz.id]||0,c=Math.round(bz.cost*Math.pow(1.6,own));
+    if(own<3&&S.cash>=c&&levelOf(S.xp)>=bz.lvl){S.cash-=c;S.biz[bz.id]=own+1;log(own?'l.bizUp':'l.bizBuy',{x:tr(bz.n),n:own+1},'a');addXp(own?30:50)}
+    render();nextEvent();return}
+  if(d.sp){const sp=S.spots[S.zone];if(!sp)return;
+    if(d.sp==='stock'){let q=0;Object.entries(S.inv).forEach(([k,v])=>{sp.stock[k]=(sp.stock[k]||0)+v;q+=v});S.inv={};S.cost={};if(q)log('l.left',{q,Z:S.zone})}
+    if(d.sp==='take'){let left=cap()-invCount(),q=0;Object.entries(sp.stock).forEach(([k,v])=>{const m=Math.min(v,left);if(m<=0)return;S.inv[k]=(S.inv[k]||0)+m;S.cost[k]=S.cost[k]||0;sp.stock[k]-=m;if(!sp.stock[k])delete sp.stock[k];left-=m;q+=m});if(q)log('l.took',{q});else toast(t('t.noneTake'))}
+    if(d.sp==='hire'&&S.cash>=DEALER_COST){S.cash-=DEALER_COST;sp.dealers++;log('l.hired',{Z:S.zone},'a')}
+    render();}
+});
+document.addEventListener('keydown',e=>{
+  if(screen==='game'&&e.key==='Enter'&&e.target.id&&e.target.id.startsWith('q-'))buy(e.target.id.slice(2));
+  if(e.key==='Escape'&&tutI>=0){endTutorial();return}
+  if(e.key==='Escape'&&$('modal').hidden){if(screen==='settings')show('menu');else if(screen==='game'){save();show('menu')}}
+});
+$('waitBtn').onclick=()=>advance(null);
+$('gMenu').onclick=()=>{if(tutI>=0)endTutorial();save();toast(t('t.saved'));show('menu')};
+$('mContinue').onclick=()=>{const sv=load(KEY_SAVE);if(sv&&!sv.over){S=sv;queue=[];show('game')}};
+$('mNew').onclick=()=>{const sv=load(KEY_SAVE);
+  if(sv&&!sv.over)modal(t('new.q'),esc(t('new.t')),[{label:t('btn.yes'),cls:'primary',fn:newGame},{label:t('btn.cancel')}]);else newGame()};
+$('mSettings').onclick=()=>show('settings');
+$('sBack').onclick=()=>show('menu');
+$('sReset').onclick=()=>modal(t('set.resetQ'),esc(t('set.resetT')),[{label:t('btn.delete'),cls:'danger',fn:()=>{del(KEY_SAVE);S=null;toast(t('set.resetDone'))}},{label:t('btn.cancel')}]);
+
+/* ================= TUTORIAL ================= */
+const TUT=[
+ {el:null,t:["Benvenuto in città","Welcome to the city","Добро пожаловать в город","Bienvenido a la ciudad"],
+  x:["Sei arrivato con pochi soldi e un debito di {M} con lo Strozzino, che cresce del {p}% ogni notte. Hai {n} notti per costruire il tuo impero: alla fine conta solo il patrimonio netto.",
+     "You arrive with little cash and a {M} debt to the loan shark, growing {p}% every night. You have {n} nights to build your empire: at the end, only your net worth counts.",
+     "Вы приехали почти без денег и с долгом ростовщику {M}, который растёт на {p}% каждую ночь. У вас {n} ночей, чтобы построить империю: в конце важен только капитал.",
+     "Llegas con poco dinero y una deuda de {M} con el usurero, que crece un {p}% cada noche. Tienes {n} noches para levantar tu imperio: al final solo cuenta tu patrimonio."]},
+ {el:'stats',t:["La tua situazione","Your status","Ваше положение","Tu situación"],
+  x:["Qui vedi contanti, banca, debito e patrimonio. Tieni d'occhio la Salute: a zero la partita finisce. La barra Polizia sale quando trafficchi: più è alta, più rischi controlli.",
+     "Here you see cash, bank, debt and net worth. Watch your Health: at zero the game is over. The Heat bar rises as you deal: the higher it is, the more police stops you risk.",
+     "Здесь наличные, банк, долг и капитал. Следите за здоровьем: при нуле игра окончена. Шкала розыска растёт от сделок: чем она выше, тем чаще проверки.",
+     "Aquí ves efectivo, banco, deuda y patrimonio. Vigila la Salud: a cero se acaba la partida. La barra de Policía sube al traficar: cuanto más alta, más controles."]},
+ {el:'pMarket',t:["Il mercato","The market","Рынок","El mercado"],
+  x:["Compra basso e vendi alto. «Disponibili» è quanto ha lo spacciatore, «Richiesta» quanto vogliono comprare i clienti di questa zona. Scrivi la quantità o premi Max, poi Compra o Vendi. Le frecce mostrano se il prezzo è salito o sceso.",
+     "Buy low, sell high. \"In stock\" is what the supplier has, \"Demand\" is how much buyers here want. Type a quantity or press Max, then Buy or Sell. Arrows show whether the price went up or down.",
+     "Покупай дёшево, продавай дорого. «В наличии» — сколько есть у поставщика, «Спрос» — сколько готовы купить в этом районе. Введите количество или нажмите «Макс», затем «Купить» или «Продать». Стрелки показывают рост или падение цены.",
+     "Compra barato y vende caro. «Disponibles» es lo que tiene el proveedor y «Demanda» lo que quieren comprar aquí. Escribe la cantidad o pulsa Máx, luego Comprar o Vender. Las flechas indican si el precio subió o bajó."]},
+ {el:'pTravel',t:["Muoversi in città","Getting around","Перемещения","Moverse por la ciudad"],
+  x:["Ogni viaggio dura una notte: i prezzi cambiano, il debito cresce e possono capitare eventi come controlli, rapine o affari. Ogni zona ha prezzi e servizi diversi.",
+     "Every trip takes one night: prices change, the debt grows and events can happen, like police stops, muggings or deals. Each zone has different prices and services.",
+     "Каждая поездка занимает ночь: цены меняются, долг растёт, и могут случиться события: проверки, ограбления, сделки. В каждом районе свои цены и услуги.",
+     "Cada viaje dura una noche: los precios cambian, la deuda crece y pueden pasar cosas, como controles, atracos o tratos. Cada zona tiene precios y servicios distintos."]},
+ {el:'pBag',t:["Lo zaino","Your backpack","Рюкзак","La mochila"],
+  x:["Puoi portare un numero limitato di dosi. Nella scheda Potenziamenti puoi passare a contenitori più grandi, fino al camion frigo.",
+     "You can only carry so many units. In the Upgrades tab you can move up to bigger carriers, all the way to a refrigerated truck.",
+     "Вы можете нести ограниченное число доз. Во вкладке «Улучшения» можно купить тару побольше, вплоть до рефрижератора.",
+     "Solo puedes llevar cierta cantidad. En la pestaña Mejoras puedes pasar a contenedores más grandes, hasta el camión frigorífico."]},
+ {el:'pTabs',t:["Far crescere l'impero","Growing the empire","Рост империи","Hacer crecer el imperio"],
+  x:["Piazze: i tuoi pusher vendono da soli ogni notte. Attività: reddito pulito che arriva sempre. Missioni: contratti con premi in soldi ed esperienza. Potenziamenti e Progressi: equipaggiamento, gradi e traguardi.",
+     "Corners: your dealers sell on their own every night. Businesses: steady clean income. Missions: contracts paying cash and XP. Upgrades and Progress: gear, ranks and achievements.",
+     "Точки: дилеры продают сами каждую ночь. Бизнес: стабильный чистый доход. Задания: заказы за деньги и опыт. Улучшения и Прогресс: снаряжение, ранги и достижения.",
+     "Puntos: tus camellos venden solos cada noche. Negocios: ingresos limpios constantes. Misiones: encargos con dinero y XP. Mejoras y Progreso: equipo, rangos y logros."]},
+ {el:'pZone',t:["In zona","Around here","В районе","En la zona"],
+  x:["Qui trovi cosa offre la zona in cui sei: aprire una piazza, banca e avvocato in Centro, lo Strozzino al Porto, l'armiere in Periferia Sud, il medico al Nord e all'Università.",
+     "This shows what your current zone offers: opening a corner, the bank and lawyer in Old Town, the loan shark at the Docks, the arms dealer in South End, doctors in North Side and University.",
+     "Здесь то, что предлагает текущий район: открыть точку, банк и адвокат в Старом городе, ростовщик в Порту, оружейник на Южной окраине, врачи в Северном районе и Университете.",
+     "Aquí ves lo que ofrece tu zona: abrir un punto, banco y abogado en el Casco Antiguo, el usurero en el Puerto, el armero en la Periferia Sur, médicos en Barrio Norte y la Universidad."]},
+ {el:'pLog',t:["La cronaca","Street news","Новости улиц","La crónica"],
+  x:["Qui leggi tutto quello che succede: vendite, retate, carichi in arrivo e prezzi impazziti. Le notizie di mercato ti dicono dove conviene andare.",
+     "Everything that happens shows up here: sales, raids, shipments and crazy prices. Market news tells you where it pays to go.",
+     "Здесь всё, что происходит: продажи, облавы, поставки и безумные цены. Рыночные новости подскажут, куда стоит ехать.",
+     "Aquí ves todo lo que pasa: ventas, redadas, cargamentos y precios disparados. Las noticias del mercado te dicen adónde conviene ir."]},
+ {el:null,t:["Il primo colpo","Your first move","Первый ход","Tu primer golpe"],
+  x:["Un consiglio: compra un po' di Nebbia o Brace qui, spostati in un'altra zona e rivendi dove il prezzo è più alto. Metti da parte i soldi per ripagare lo Strozzino al Porto. Puoi rivedere questa guida con il pulsante ? in alto.",
+     "A tip: buy some Fog or Ember here, move to another zone and resell where the price is higher. Save up to repay the loan shark at the Docks. You can replay this guide with the ? button at the top.",
+     "Совет: купите немного «Тумана» или «Жара», переезжайте в другой район и продайте дороже. Копите деньги, чтобы вернуть долг ростовщику в Порту. Руководство можно открыть снова кнопкой ? вверху.",
+     "Un consejo: compra algo de Niebla o Brasa aquí, muévete a otra zona y revende donde el precio sea mayor. Ahorra para pagar al usurero en el Puerto. Puedes volver a ver esta guía con el botón ? de arriba."]}];
+let tutI=-1;
+function startTutorial(){if(!S)return;tutI=0;showTut()}
+function clearHl(){document.querySelectorAll('.tut-hl').forEach(e=>e.classList.remove('tut-hl'))}
+function showTut(){
+  clearHl();
+  const st=TUT[tutI];
+  $('tutBack').hidden=false;$('tut').hidden=false;
+  $('tutStep').textContent=t('tut.step',{a:tutI+1,b:TUT.length});
+  $('tutTitle').textContent=tr(st.t);
+  $('tutText').textContent=tr(st.x).replace('{M}',money(S.debt)).replace('{p}',S.rate).replace('{n}',S.maxDays);
+  $('tutPrev').textContent=t('tut.back');$('tutPrev').hidden=tutI===0;
+  $('tutNext').textContent=tutI===TUT.length-1?t('tut.go'):t('tut.next');
+  $('tutSkip').textContent=t('tut.skip');$('tutSkip').hidden=tutI===TUT.length-1;
+  if(st.el){const el=$(st.el);el.classList.add('tut-hl');
+    const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({behavior:reduce?'auto':'smooth',block:'start'});}
+  else window.scrollTo({top:0,behavior:'auto'});
+  $('tutNext').focus({preventScroll:true});
+}
+function endTutorial(){clearHl();tutI=-1;$('tutBack').hidden=true;$('tut').hidden=true;store(KEY_TUT,1);window.scrollTo({top:0,behavior:'auto'})}
+$('tutNext').onclick=()=>{if(tutI>=TUT.length-1)endTutorial();else{tutI++;showTut()}};
+$('tutPrev').onclick=()=>{if(tutI>0){tutI--;showTut()}};
+$('tutSkip').onclick=endTutorial;
+$('gHelp').onclick=startTutorial;
+
+/* ================= SFONDO ANIMATO + FPS ================= */
+const cv=$('bg'),cx=cv.getContext('2d');
+let W=0,H=0,blds=[],drops=[],raf=0,last=0,acc=0,frames=0,fpsT=0;
+function resize(){
+  const DPR=Math.min(window.devicePixelRatio||1,2);W=innerWidth;H=innerHeight;
+  cv.width=W*DPR;cv.height=H*DPR;cx.setTransform(DPR,0,0,DPR,0,0);
+  blds=[];let x=-10;
+  while(x<W+10){const w=rnd(40,110),h=rnd(H*.18,H*.55);const wins=[];
+    for(let yy=H-h+14;yy<H-14;yy+=16)for(let xx=x+8;xx<x+w-10;xx+=14)if(Math.random()<.45)wins.push([xx,yy,Math.random()<.85,rnd(0,1)]);
+    blds.push({x,w,h,wins});x+=w+rnd(2,12)}
+  drops=Array.from({length:Math.round(W/9)},()=>({x:rnd(0,W),y:rnd(0,H),v:rnd(500,900),l:rnd(8,18)}));
+  if(!SET.anim){cx.fillStyle='#0d1117';cx.fillRect(0,0,W,H)}
+}
+function draw(dt,now){
+  const g=cx.createLinearGradient(0,0,0,H);g.addColorStop(0,'#0a0d14');g.addColorStop(1,'#1a1410');
+  cx.fillStyle=g;cx.fillRect(0,0,W,H);
+  const heat=(screen==='game'&&S)?S.heat/100:.15;
+  if(heat>.2){const ph=Math.sin(now/220);cx.fillStyle=ph>0?'rgba(255,60,60,'+(heat*.12*ph)+')':'rgba(60,140,255,'+(heat*.12*-ph)+')';cx.fillRect(0,0,W,H)}
+  const rg=cx.createRadialGradient(W*.5,-40,10,W*.5,-40,H*.9);rg.addColorStop(0,'rgba(255,166,48,.22)');rg.addColorStop(1,'rgba(255,166,48,0)');
+  cx.fillStyle=rg;cx.fillRect(0,0,W,H);
+  for(const b of blds){
+    cx.fillStyle='#07090d';cx.fillRect(b.x,H-b.h,b.w,b.h);
+    for(const wn of b.wins){
+      if(Math.random()<.0008*dt)wn[2]=!wn[2];
+      if(wn[2]){cx.fillStyle=wn[3]>.8?'rgba(140,190,255,.55)':'rgba(255,190,90,'+(.35+wn[3]*.35)+')';cx.fillRect(wn[0],wn[1],7,9)}
+    }
+  }
+  cx.strokeStyle='rgba(170,190,220,.22)';cx.lineWidth=1;cx.beginPath();
+  for(const d of drops){d.y+=d.v*dt/1000;d.x-=d.v*dt/9000;if(d.y>H){d.y=-20;d.x=rnd(0,W+40)}cx.moveTo(d.x,d.y);cx.lineTo(d.x-d.l*.12,d.y+d.l)}
+  cx.stroke();
+}
+function loop(now){
+  raf=requestAnimationFrame(loop);
+  const dt=last?now-last:16;last=now;
+  const target=SET.fps?1000/SET.fps:0;
+  acc+=dt;
+  if(target&&acc<target-.5)return;
+  const step=target?acc:dt;acc=target?acc%target:0;
+  if(SET.anim)draw(Math.min(step,100),now);
+  frames++;
+  if(now-fpsT>=500){$('fps').textContent=Math.round(frames*1000/(now-fpsT))+' FPS';frames=0;fpsT=now}
+}
+function applyFpsSettings(){$('fps').hidden=!SET.showFps;if(!SET.anim){cx.fillStyle='#0d1117';cx.fillRect(0,0,W,H)}}
+addEventListener('resize',resize);
+
+/* ================= AVVIO ================= */
+function start(data){
+  const s=load(KEY_SET);if(s)SET=Object.assign(SET,s);
+  if(data&&data.S){S=data.S;tab=data.tab||'spots'}
+  resize();applyFpsSettings();
+  if(!raf)raf=requestAnimationFrame(loop);
+  show(data&&data.screen&&data.S?data.screen:'menu');
+}
+window.claude?.hot?.snapshot?.(()=>({S,screen,tab}));
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+})();
+</script>
+
+</body></html>
